@@ -1,5 +1,7 @@
+
 #include <iostream>
 #include <memory>
+#include <fstream>
 
 #include <lcm/lcm-cpp.hpp>
 
@@ -41,23 +43,27 @@ const char* const kLcmStatusChannel = "IIWA_STATUS";
 const char* const kLcmCommandChannel = "IIWA_COMMAND";
 
 constexpr double kUninitTime = -1.0;
- const std::string kPath =
+const std::string kPath =
     "drake/manipulation/models/iiwa_description/urdf/iiwa14_polytope_collision.urdf";
-const std::string kEEName = "iiwa_link_ee";
+const std::string kEEName = "iiwa_link_7";
 const Isometry3<double> kBaseOffset = Isometry3<double>::Identity();
 
-
+//constexpr double kTagSize =  0.065;
+constexpr double kTagSize =  0.112;
 // Example usage:
 //AprilTagPerception test;
 //  test.Run();
 //  boost::this_thread::sleep (boost::posix_time::seconds (5));
 //  test.Stop();
 
+#define APTAG
+//#undef APTAG
+
 class AprilTagPerception {
  public:
   // Default is 36h11 family with A4 paper print size.
   AprilTagPerception() : tag_code_(AprilTags::tagCodes36h11) {
-    tag_size_ = 0.166;
+    tag_size_ = kTagSize;
     // Got the information about intrinsics from ROS.
     // In terminal run: roslaunch openni2_launch openni2.launch.
     // Then rostopic echo /camera/rgb/camera_info
@@ -77,7 +83,15 @@ class AprilTagPerception {
     py_ = 239.5;
     // Initialize the april tag detector.
     tag_detector_ = new AprilTags::TagDetector(tag_code_);
+    camera_interface_ = new pcl::io::OpenNI2Grabber();
+    // Initialize the camera interface.
+    boost::function<void (const boost::shared_ptr<pcl::io::Image>&,
+      const boost::shared_ptr<pcl::io::DepthImage>&, float)> image_fun_ =
+      boost::bind (&AprilTagPerception::image_cb1, this, _1, _2, _3);
+    camera_interface_->registerCallback(image_fun_);
   }
+
+  bool is_cb_called() const { return cb_called_; }
 
   void SetAprilTagCodeFamily(AprilTags::TagCodes tag_code) {
     tag_code_ = tag_code;
@@ -98,12 +112,6 @@ class AprilTagPerception {
   }
 
   void Run() {
-    // Initialize the camera interface.
-    camera_interface_ = new pcl::io::OpenNI2Grabber();
-    boost::function<void (const boost::shared_ptr<pcl::io::Image>&,
-      const boost::shared_ptr<pcl::io::DepthImage>&, float)> image_fun_ =
-      boost::bind (&AprilTagPerception::image_cb1, this, _1, _2, _3);
-    camera_interface_->registerCallback(image_fun_);
     camera_interface_->start ();
   }
 
@@ -111,57 +119,67 @@ class AprilTagPerception {
     camera_interface_->stop();
   }
 
+  void do_stuff() { do_stuff_ = true; }
+
  private:
+  bool cb_called_{false};
+
+  bool do_stuff_{false};
+
   void image_cb1(const boost::shared_ptr<pcl::io::Image>& rgb_image,
-    const boost::shared_ptr<pcl::io::DepthImage>& depth_image,
-    float reciprocalFocalLength) {
-      bool m_timing = true;
-      cv::Mat cv_image = cv::Mat(rgb_image->getHeight(), rgb_image->getWidth(),
+      const boost::shared_ptr<pcl::io::DepthImage>& depth_image,
+      float reciprocalFocalLength) {
+
+    bool m_timing = true;
+    cv::Mat cv_image = cv::Mat(rgb_image->getHeight(), rgb_image->getWidth(),
         CV_8UC3);
-      rgb_image->fillRGB(cv_image.cols, cv_image.rows, cv_image.data,
+    rgb_image->fillRGB(cv_image.cols, cv_image.rows, cv_image.data,
         cv_image.step);
-      // Opencv uses bgr convention.
-      cv::cvtColor(cv_image, cv_image, CV_RGB2BGR);
-      // Depth image to opencv.
-      // cv::Mat D1 = cv::Mat(int(depth_image->getHeight()), int(depth_image->getWidth()), CV_32F);
-      // depth_image->fillDepthImage(D1.cols, D1.rows,(float *)D1.data,D1.step);
-      cv::Mat image_gray;
-      cv::cvtColor(cv_image, image_gray, CV_BGR2GRAY);
-      vector<AprilTags::TagDetection> detections = tag_detector_->extractTags(
+    // Opencv uses bgr convention.
+    cv::cvtColor(cv_image, cv_image, CV_RGB2BGR);
+    // Depth image to opencv.
+    // cv::Mat D1 = cv::Mat(int(depth_image->getHeight()), int(depth_image->getWidth()), CV_32F);
+    // depth_image->fillDepthImage(D1.cols, D1.rows,(float *)D1.data,D1.step);
+    cv::Mat image_gray;
+    cv::cvtColor(cv_image, image_gray, CV_BGR2GRAY);
+    vector<AprilTags::TagDetection> detections = tag_detector_->extractTags(
         image_gray);
 
-      // print out each detection
-      cout << detections.size() << " tags detected:" << endl;
-      for (int i=0; i<detections.size(); i++) {
-        extract_detection(detections[i]);
-      }
-      num_detections_last_image = detections.size();
-      // // show the current image including any detections
-      // if (true) {
-      //   for (int i=0; i<detections.size(); i++) {
-      //     // also highlight in the image
-      //     detections[i].draw(image_gray);
-      //   }
-      //   imshow("apriltag_detection", image_gray); // OpenCV call
-      // }
-      // cv::waitKey(0);
+    // print out each detection
+    // cout << detections.size() << " tags detected:" << endl;
+    for (int i=0; i<detections.size(); i++) {
+      extract_detection(detections[i]);
     }
+    num_detections_last_image = detections.size();
+    // // show the current image including any detections
+    // if (true) {
+    //   for (int i=0; i<detections.size(); i++) {
+    //     // also highlight in the image
+    //     detections[i].draw(image_gray);
+    //   }
+    //   imshow("apriltag_detection", image_gray); // OpenCV call
+    // }
+    // cv::waitKey(0);
+  }
 
   void extract_detection(AprilTags::TagDetection& detection) {
     Eigen::Vector3d translation;
     Eigen::Matrix3d rotation;
-    detection.getRelativeTranslationRotation(tag_size_, fx_, fy_, px_, py_,
-      translation, rotation);
+    // detection.getRelativeTranslationRotation(tag_size_, fx_, fy_, px_, py_,
+    //   translation, rotation);
 
-    Eigen::Matrix3d F;
-    F << 1, 0,  0,
-         0,  -1,  0,
-         0,  0,  1;
-    Eigen::Matrix3d fixed_rot = F*rotation;
-    april_tag_pose_.linear() = fixed_rot;
-    april_tag_pose_.translation() = translation;
-    std::cout << april_tag_pose_.linear() << std::endl;
-    std::cout << april_tag_pose_.translation() << std::endl;
+    // Eigen::Matrix3d F;
+    // F << 1, 0,  0,
+    //      0,  1,  0,
+    //      0,  0,  1;
+    // Eigen::Matrix3d fixed_rot = F*rotation;
+    // april_tag_pose_.linear() = fixed_rot;
+    // april_tag_pose_.translation() = translation;
+    
+    april_tag_pose_ = detection.getRelativeTransform(tag_size_, fx_, fy_, px_, py_);
+    
+    // std::cout << april_tag_pose_.linear() << std::endl;
+    // std::cout << april_tag_pose_.translation() << std::endl;
   }
 
   pcl::Grabber* camera_interface_;
@@ -176,11 +194,10 @@ class AprilTagPerception {
   double px_;
   double py_;
   // The current perceived april tag pose w.r.t. camera frame.
-  Eigen::Isometry3d april_tag_pose_;
+  Eigen::Isometry3d april_tag_pose_{Isometry3<double>::Identity()};
   // The number of detection in the the last seen image.
   int num_detections_last_image;
 };
-
 
 class IiwaState {
  public:
@@ -253,12 +270,21 @@ class RobotPlanRunner {
         state_(robot_),
         q_ini_(q_ini) {
     lcm_.subscribe(kLcmStatusChannel, &RobotPlanRunner::HandleStatus, this);
+
+    q_calib_ = GenerateCalibrateConfigurations(q_ini_);
+
+#ifdef APTAG
+    ap_tag_.Run();
+    // Create a file to log calibration intermediate poses.
+    output_ss.open("output.txt");
+#endif
   }
 
   PiecewisePolynomial<double> SplineToDesiredConfiguration(
       const VectorX<double>& q_d, double duration) const {
     std::vector<double> times = {state_.get_time(),
                                  state_.get_time() + duration};
+    std::cout << "t0 " << times[0] << " t1 " << times[1] << "\n";
     std::vector<MatrixX<double>> knots = {state_.get_q(), q_d};
     MatrixX<double> zero =
         MatrixX<double>::Zero(robot_.get_num_velocities(), 1);
@@ -267,26 +293,33 @@ class RobotPlanRunner {
 
   // Make a 3 x 3 grid of end effector pose.
   std::vector<Isometry3<double>> GenerateGridOfCalibrateEndEffectorPose(
-      double dy, double dz, double rot_z, double rot_y) const {
+      double dx, double dy, double dz, double rot_x, double rot_z, 
+      double rot_y) const {
     std::vector<Isometry3<double>> ret;
 
     // The rotation from the end effector frame to the last link frame =
     // [0, 0, -1;
     //  0, 1, 0;
     //  1, 0, 0];
+    const int num_grids_per_dim = 4;
+    const int mid_value = floor(num_grids_per_dim / 2.0);
+    for (int i = 0; i < num_grids_per_dim; ++i) {
+      for (int j = 0; j < num_grids_per_dim; ++j) {
+      	for (int k = 0; k < num_grids_per_dim; ++k) {
+          Isometry3<double> pose = Isometry3<double>::Identity();
+          pose.translation()[0] = (-mid_value + i) * dx;
+          pose.translation()[1] = (-mid_value + j) * dy;
+          pose.translation()[2] = (-mid_value + k) * dz;
+  	      
 
-    for (int i = 0; i < 3; ++i) {
-      for (int j = 0; j < 3; ++j) {
-        Isometry3<double> pose = Isometry3<double>::Identity();
-        pose.translation()[1] = (1 - j) * dy;
-        pose.translation()[2] = (-1 + i) * dz;
-
-        pose.linear() =
-            (AngleAxis<double>((-1 + j) * rot_z, Vector3<double>::UnitZ()) *
-             AngleAxis<double>((-1 + i) * rot_y, Vector3<double>::UnitY()))
-                .toRotationMatrix();
-        ret.push_back(pose);
+          pose.linear() =
+              (AngleAxis<double>((-mid_value + k) * rot_z, Vector3<double>::UnitZ()) *
+               AngleAxis<double>((mid_value - i) * rot_y, Vector3<double>::UnitY()) *
+  	           AngleAxis<double>((-mid_value + j) * rot_x, Vector3<double>::UnitX())).
+                toRotationMatrix();
+          ret.push_back(pose);
       }
+    }
     }
 
     return ret;
@@ -302,9 +335,9 @@ class RobotPlanRunner {
     robot_.doKinematics(cache);
     Isometry3<double> X_WE_center =
         robot_.CalcBodyPoseInWorldFrame(cache, end_effector_);
-
+    
     std::vector<Isometry3<double>> poses =
-        GenerateGridOfCalibrateEndEffectorPose(0.1, 0.1, 0.2, 0.2);
+      GenerateGridOfCalibrateEndEffectorPose(0.025, 0.05, 0.05, 0.10, 0.10, 0.10);
 
     const Vector3<double> pos_tol(0.001, 0.001, 0.001);
     const double rot_tol = 0.01;
@@ -364,20 +397,21 @@ class RobotPlanRunner {
     constexpr int GOTO = 0;
     constexpr int WAIT = 1;
     constexpr int NOOP = 2;
+    constexpr int SPIN = 3;
 
-    int STATE = GOTO;
+    int STATE = SPIN;
     bool state_init = true;
     double state_t0;
 
     // traj for GOTO state.
     PiecewisePolynomial<double> traj;
 
-    const double kTrajTime = 2;
-    const double kWaitTime = 2;
+    const double kTrajTime = 1;
+    const double kWaitTime = 1;
 
-    std::vector<VectorX<double>> q_calib =
-        GenerateCalibrateConfigurations(q_ini_);
     size_t calib_index = 0;
+
+    bool grab_ap_pose = false;
 
     while (true) {
       // Call lcm handle until at least one status message is
@@ -386,9 +420,26 @@ class RobotPlanRunner {
       }
 
       switch (STATE) {
+        case SPIN: {
+          if (state_init) {
+            state_init = false;
+            state_t0 = state_.get_time();
+            std::cout << "spin start\n";
+            q_d_ = state_.get_q();
+          }
+
+          if (state_.get_time() - state_t0 > 2) {
+            STATE = GOTO;
+            state_init = true;
+            std::cout << "spin end\n";
+          }
+
+          break;
+        }
+
         case GOTO: {
           if (state_init) {
-            traj = SplineToDesiredConfiguration(q_calib[calib_index], kTrajTime);
+            traj = SplineToDesiredConfiguration(q_calib_[calib_index], kTrajTime);
             calib_index++;
 
             state_init = false;
@@ -401,7 +452,6 @@ class RobotPlanRunner {
             STATE = WAIT;
             state_init = true;
           }
-
           break;
         }
 
@@ -409,10 +459,24 @@ class RobotPlanRunner {
           if (state_init) {
             state_init = false;
             state_t0 = state_.get_time();
+            grab_ap_pose = false;
           }
 
+#ifdef APTAG
+          if (state_.get_time() - state_t0 > 0.5 && !grab_ap_pose) {
+            if (ap_tag_.CheckDetectionInLastImage()) {
+              Isometry3<double> X_WE0 = robot_.CalcBodyPoseInWorldFrame(
+                  state_.get_cache(), end_effector_);
+
+              output_ss << ap_tag_.GetRecentAprilTagPose().matrix() << std::endl;
+              output_ss << X_WE0.matrix() << std::endl;
+              grab_ap_pose = true;
+            }
+          }
+#endif
+
           if (state_.get_time() - state_t0 > kWaitTime) {
-            if (calib_index >= q_calib.size()) {
+            if (calib_index >= q_calib_.size()) {
               STATE = NOOP;
             } else {
               STATE = GOTO;
@@ -438,6 +502,9 @@ class RobotPlanRunner {
       // Log time of command.
       cmd_time = state_.get_time();
     }
+#ifdef APTAG
+    output_ss.close();
+#endif
   }
 
  private:
@@ -455,6 +522,12 @@ class RobotPlanRunner {
   VectorX<double> q_d_;
 
   VectorX<double> q_ini_;
+  std::vector<VectorX<double>> q_calib_;
+
+#ifdef APTAG
+  AprilTagPerception ap_tag_;
+  ofstream output_ss;
+#endif
 };
 
 int do_main() {
@@ -465,18 +538,28 @@ int do_main() {
 
   // Joint angles for the "center" pose, jjz need to update this.
   VectorX<double> q_center = VectorX<double>::Zero(7);
-  q_center[1] = 45. / 180. * M_PI;
-  q_center[3] = -90. / 180. * M_PI;
-  q_center[5] = -45. / 180. * M_PI;
+  // q_center[0] = -5. / 180. * M_PI;
+  // q_center[1] = 45. / 180. * M_PI;
+  // q_center[3] = -90. / 180. * M_PI;
+  // q_center[5] = -45. / 180. * M_PI;
+
+  // New values: the camera is facing forward aligned with X axis. 
+  // The camera position is in z is about 50 cm from the table.
+  q_center[0] = -3. / 180. * M_PI;
+  q_center[1] = 55. / 180. * M_PI;
+  q_center[2] = 1. / 180 * M_PI;
+  q_center[3] = -67. / 180. * M_PI;
+  q_center[4] = 12. / 180 * M_PI;
+  q_center[5] = -37. / 180. * M_PI;
+  q_center[6] = 12. / 180. * M_PI;
+
 
   RobotPlanRunner runner(*tree, kEEName, q_center);
-  AprilTagPerception test;
-  test.Run();
+  // AprilTagPerception test;
+  // test.Run();
+  runner.Run();
 //  boost::this_thread::sleep (boost::posix_time::seconds (5));
-  runner.Run();
-  test.Stop();
-  return 0;
-  runner.Run();
+  //test.Stop();
   return 0;
 }
 
