@@ -18,10 +18,13 @@ ${OpenCV_INCLUDE_DIRS}
 ${apriltags_INCLUDE_DIR}
 )
 
-add_definitions(${PCL_DEFINITIONS} -std=c++11 -g -O2)
+add_definitions(${PCL_DEFINITIONS} -std=c++11 -g -O2 -fext-numeric-literals)
 
 MESSAGE(STATUS "PCL_INCLUDE_DIR: " ${PCL_INCLUDE_DIRS})
 MESSAGE(STATUS "PCL_LIB_DIR: " ${PCL_LIBRARY_DIRS})
 
 add_executable (kuka_camera_calibrate kuka_camera_calibrate.cc)
 target_link_libraries (kuka_camera_calibrate ${PCL_LIBRARIES} ${OpenCV_LIBS} apriltags drake::drake drake::drake-lcmtypes-cpp)
+
+add_executable (pcl_save_pcd pcl_save_pcd.cc)
+target_link_libraries (pcl_save_pcd ${PCL_LIBRARIES} drake::drake)
