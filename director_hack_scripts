@@ -1,0 +1,14 @@
+pcd = ioUtils.readPolyData(file_name); camera_tf = numpy.dot(link7_tf, camera_to_link7_tf_new); vtk_transform = transformUtils.getTransformFromNumpy(camera_tf); pcd_rotated = filterUtils.transformPolyData(pcd, vtk_transform); visObjRotated = vis.updatePolyData(pcd_rotated, 'tablerotated_1', color = [1, 0, 0])
+
+
+
+
+
+link7_tmp = robotSystem.robotStateModel.getLinkFrame('iiwa_link_7'); link7_tf =transformUtils.getNumpyFromTransform(link7_tmp); pcd = ioUtils.readPolyData(file_name); camera_tf = numpy.dot(link7_tf, camera_to_link7_tf_new); vtk_transform = transformUtils.getTransformFromNumpy(camera_tf); pcd_rotated2 = filterUtils.transformPolyData(pcd, vtk_transform); visObjRotated = vis.updatePolyData(pcd_rotated2, 'tablerotated_2', color = [0, 1, 0]);
+
+
+camera_to_link7_tf_new = numpy.array([[0.374518790489984,  -0.927007964862412,  -0.019796682842546,  -0.060873685222994],[0.926286167789486,   0.375014226622970,  -0.036854649533581,   0.031644026222508],[0.041588591365740,  -0.004534634717917,   0.999124529854106,   0.115],[ 0,                   0,                   0,   1.000000000000000]])
+
+
+
+
