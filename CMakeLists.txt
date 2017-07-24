@@ -28,3 +28,6 @@ target_link_libraries (kuka_camera_calibrate ${PCL_LIBRARIES} ${OpenCV_LIBS} apr
 
 add_executable (pcl_save_pcd pcl_save_pcd.cc)
 target_link_libraries (pcl_save_pcd ${PCL_LIBRARIES} drake::drake)
+
+add_executable (test_perception_interface perception.cc)
+target_link_libraries (test_perception_interface ${PCL_LIBRARIES} drake::drake)
