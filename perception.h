@@ -8,6 +8,17 @@
 #include <pcl/segmentation/lccp_segmentation.h>
 #include <pcl/filters/statistical_outlier_removal.h>
 #include <pcl/io/pcd_io.h>
+#include <pcl/features/normal_3d.h>
+#include <pcl/features/normal_3d_omp.h>
+#include <pcl/features/integral_image_normal.h>
+
+#include <opencv2/core/core.hpp>
+#include <opencv2/opencv.hpp>
+#include <opencv2/highgui/highgui.hpp>
+#include <opencv2/imgproc/imgproc.hpp>
+
+#include <Eigen/Geometry>
+
 #include <memory>
 #include <sys/time.h>
 
@@ -21,34 +32,74 @@ typedef pcl::PointXYZ POINTONLY;
 // 3) Point cloud normal estimation.
 // 4) Fuse multiple point clouds.
 // 5) Apply transformation to point cloud.
-// 6) 
+// 6) Project the point cloud onto a plane  
 
-// Todo(Jiaji): consider templating the class so input could be point cloud and
-// colored point cloud.
+struct Camera
+{
+  Camera () : pose (Eigen::Affine3f::Identity()), fx(), fy(), img_height(), 
+                    img_width() {};
+  Eigen::Affine3f pose;
+  double fx;
+  double fy;
+  int img_height; // number of rows. 
+  int img_width;  // number of cols.
+};
+
 class PointCloudPerception {
   public:
   	PointCloudPerception() {};  	
   	
-  	void LoadColoredPCDFile(std::string file_name, 
-  		pcl::PointCloud<RGBD>::Ptr cloud);
-  	
-  	void VisualizePointCloud(pcl::PointCloud<RGBD>::ConstPtr cloud, 
+    template <typename T>
+  	void LoadPCDFile(std::string file_name, 
+  		boost::shared_ptr<pcl::PointCloud<T>> cloud) {
+      pcl::PCDReader reader;
+      reader.read<T>(file_name, *cloud);
+    }
+
+    // Display the point cloud until 'q' key is pressed.	
+  	template <typename T>
+    void VisualizePointCloud(const boost::shared_ptr<pcl::PointCloud<T>> cloud, 
   		Eigen::Affine3f tf = Eigen::Affine3f::Identity());
 
-  	void ApplyTransformToPointCloud(Eigen::Affine3f tf, 
-  		pcl::PointCloud<RGBD>::Ptr cloud);
+    // Todo (Jiaji): refractor and redesign to fork a new thread just for visualization.
+    template <typename T>
+    void VisualizePointCloudAndNormal(const boost::shared_ptr<pcl::PointCloud<T>> cloud,
+      boost::shared_ptr<pcl::PointCloud<pcl::Normal>> normals,
+      Eigen::Affine3f tf = Eigen::Affine3f::Identity());
 
-  	void OutlierRemoval(pcl::PointCloud<RGBD>::Ptr cloud, 
+
+  	template <typename T>
+    void ApplyTransformToPointCloud(Eigen::Affine3f tf, 
+  		boost::shared_ptr<pcl::PointCloud<T>> cloud);
+
+    template <typename T>
+  	void OutlierRemoval(boost::shared_ptr<pcl::PointCloud<T>> cloud, 
   		int num_neighbor = 50, double std_dev_threshold = 1.0);
   	
   	// Get the plane coeffcients. ax + by + cz + d = 0, returned in vector4d.
-  	void SegmentPlane(const pcl::PointCloud<RGBD>::ConstPtr cloud, 
+    template <typename T>
+    void FindPlane(const boost::shared_ptr<pcl::PointCloud<T>> cloud, 
   		Eigen::Vector4d* coeffs_plane,  pcl::PointIndices::Ptr inliers, 
   		double dist_threshold = 0.01);
 
-  	// Points normals estimation.
+  	// Points normals estimation. Assume the camera view is at world origin.
+    // If the points are organized, we use integral image for speeding up.
+    // Otherwise we use plain covariance matrix estimation with omp multi threading. 
+    template <typename T>
+    void EstimateNormal(const boost::shared_ptr<pcl::PointCloud<T>> cloud, 
+      boost::shared_ptr<pcl::PointCloud<pcl::Normal>> normals, 
+      double radius = 0.03);
+
+    // Projection point cloud onto a camera pose and generate opencv rgb image.
+    // Note that the point cloud needs to be transformed to camera frame coordinate
+    // first. 
+    cv::Mat ProjectRGBDPointCloudToCameraImagePlane(
+      const boost::shared_ptr<pcl::PointCloud<RGBD>> cloud, 
+      const Camera camera, int stride = 4);
 
   	// Fuse multiple point clouds.
+
+    // Fuse multiple point clouds and normals. 
 
   private:
 
