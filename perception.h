@@ -1,3 +1,5 @@
+#include "point_cloud_registration.h"
+
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
 #include <pcl/common/transforms.h>
@@ -7,6 +9,9 @@
 #include <pcl/segmentation/sac_segmentation.h>
 #include <pcl/segmentation/lccp_segmentation.h>
 #include <pcl/filters/statistical_outlier_removal.h>
+#include <pcl/filters/filter.h>
+#include <pcl/filters/voxel_grid.h>
+
 #include <pcl/io/pcd_io.h>
 #include <pcl/features/normal_3d.h>
 #include <pcl/features/normal_3d_omp.h>
@@ -24,8 +29,9 @@
 
 #include <cmath>
 
-typedef pcl::PointXYZRGBA RGBD;
-typedef pcl::PointXYZ POINTONLY;
+typedef pcl::PointXYZRGBA ColoredPointT;
+typedef pcl::PointXYZ PointT;
+
 // This class provides the interface to several PCL algorithms. 
 // 1) Statistical removal of outliers. 
 // 2) Segmentation of the table.
@@ -33,6 +39,9 @@ typedef pcl::PointXYZ POINTONLY;
 // 4) Fuse multiple point clouds.
 // 5) Apply transformation to point cloud.
 // 6) Project the point cloud onto a plane  
+
+
+
 
 struct Camera
 {
@@ -55,6 +64,9 @@ class PointCloudPerception {
       pcl::PCDReader reader;
       reader.read<T>(file_name, *cloud);
     }
+    template <typename T>
+    void DownSample(boost::shared_ptr<pcl::PointCloud<T>> cloud, 
+                    double leaf_size = 0.005);
 
     // Display the point cloud until 'q' key is pressed.	
   	template <typename T>
@@ -93,12 +105,21 @@ class PointCloudPerception {
     // Projection point cloud onto a camera pose and generate opencv rgb image.
     // Note that the point cloud needs to be transformed to camera frame coordinate
     // first. 
-    cv::Mat ProjectRGBDPointCloudToCameraImagePlane(
-      const boost::shared_ptr<pcl::PointCloud<RGBD>> cloud, 
+    cv::Mat ProjectColoredPointCloudToCameraImagePlane(
+      const boost::shared_ptr<pcl::PointCloud<ColoredPointT>> cloud, 
       const Camera camera, int stride = 4);
 
-  	// Fuse multiple point clouds.
-
+  	// Fuse a pair of point clouds by aligning normal and curvature features.
+    // A transformation will be applied to the second point cloud (tgt) to the 
+    // first point cloud (src). 
+    // Note that the two point cloud needs to be roughly aligned already with 
+    // reasonable amount of intersection. 
+    template <typename T>
+    void FusePointCloudPair(const boost::shared_ptr<pcl::PointCloud<T>> src, 
+      const boost::shared_ptr<pcl::PointCloud<T>> tgt, 
+      boost::shared_ptr<pcl::PointCloud<T>> combined, 
+      Eigen::Matrix4f* transform);
+    
     // Fuse multiple point clouds and normals. 
 
   private:

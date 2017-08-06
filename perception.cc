@@ -7,6 +7,17 @@ void LoadPCDFile(std::string file_name,
 	boost::shared_ptr<pcl::PointCloud<T>> cloud) {
   pcl::PCDReader reader;
   reader.read<T>(file_name, *cloud);
+  std::vector<int> indices;
+  pcl::removeNaNFromPointCloud(*cloud,*cloud, indices);
+}
+
+template <typename T>
+void PointCloudPerception::DownSample(boost::shared_ptr<pcl::PointCloud<T>> cloud, 
+																			double leaf_size) {
+	pcl::VoxelGrid<T> grid;
+	grid.setLeafSize(leaf_size, leaf_size, leaf_size);
+	grid.setInputCloud(cloud);
+	grid.filter(*cloud);
 }
 
 template <typename T>
@@ -14,7 +25,7 @@ void PointCloudPerception::VisualizePointCloud(
     const boost::shared_ptr<pcl::PointCloud<T>>cloud, Eigen::Affine3f tf) {
   pcl::visualization::PCLVisualizer viewer("Point Cloud Visualization");
 	viewer.addCoordinateSystem(1.0, tf);
-	pcl::visualization::PointCloudColorHandlerRGBField<RGBD> rgb(cloud);
+	pcl::visualization::PointCloudColorHandlerRGBField<ColoredPointT> rgb(cloud);
 	viewer.addPointCloud(cloud, rgb, "Cloud");
 	// Display the point cloud until 'q' key is pressed.
   while (!viewer.wasStopped ()) { 
@@ -29,7 +40,7 @@ void PointCloudPerception::VisualizePointCloudAndNormal(
     Eigen::Affine3f tf) {
 	pcl::visualization::PCLVisualizer viewer("Point Cloud Visualization");
 	viewer.addCoordinateSystem(1.0, tf);
-	pcl::visualization::PointCloudColorHandlerRGBField<RGBD> rgb(cloud);
+	pcl::visualization::PointCloudColorHandlerRGBField<ColoredPointT> rgb(cloud);
 	viewer.addPointCloud(cloud, rgb, "Cloud");
 
 	viewer.addPointCloudNormals<T,pcl::Normal>(cloud, normals);
@@ -50,7 +61,7 @@ template <typename T>
 void PointCloudPerception::OutlierRemoval(
 		boost::shared_ptr<pcl::PointCloud<T>> cloud, int num_neighbor, 
 	double std_dev_threshold) {
-  pcl::StatisticalOutlierRemoval<RGBD> sor;
+  pcl::StatisticalOutlierRemoval<ColoredPointT> sor;
   sor.setInputCloud (cloud);
   sor.setMeanK (num_neighbor);
   sor.setStddevMulThresh (std_dev_threshold);
@@ -66,7 +77,7 @@ void PointCloudPerception::FindPlane(
   pcl::ModelCoefficients::Ptr coefficients (new pcl::ModelCoefficients);
 	//pcl::PointIndices::Ptr inliers (new pcl::PointIndices);
 	// Create the segmentation object
-	pcl::SACSegmentation<RGBD> seg;
+	pcl::SACSegmentation<ColoredPointT> seg;
 	// Optional
 	seg.setOptimizeCoefficients (true);
 	// Mandatory
@@ -118,8 +129,23 @@ void PointCloudPerception::EstimateNormal(
 	// }
 }
 
-cv::Mat PointCloudPerception::ProjectRGBDPointCloudToCameraImagePlane(
-	  const boost::shared_ptr<pcl::PointCloud<RGBD>> cloud, const Camera camera,
+
+template <typename T>
+void PointCloudPerception::FusePointCloudPair(
+		const boost::shared_ptr<pcl::PointCloud<T>> src,  
+    const boost::shared_ptr<pcl::PointCloud<T>> tgt, 
+    boost::shared_ptr<pcl::PointCloud<T>> combined, 
+    Eigen::Matrix4f* transform) {
+	 // First, estimate normal and curvture for each point cloud.
+	 boost::shared_ptr<pcl::PointCloud<pcl::Normal>> normals_src(
+		new pcl::PointCloud<pcl::Normal>);
+   boost::shared_ptr<pcl::PointCloud<pcl::Normal>> normals_tgt(
+		new pcl::PointCloud<pcl::Normal>);
+
+}
+
+cv::Mat PointCloudPerception::ProjectColoredPointCloudToCameraImagePlane(
+	  const boost::shared_ptr<pcl::PointCloud<ColoredPointT>> cloud, const Camera camera,
 	  int stride) {
 	// OpenCV is row-major allocation.
 	cv::Mat projected_cv_img(camera.img_height, camera.img_width, CV_8UC3);
@@ -192,12 +218,15 @@ cv::Mat PointCloudPerception::ProjectRGBDPointCloudToCameraImagePlane(
 	return projected_cv_img;
 }
 
+
+
 int main() {
+	//GeometryAlignmentRepresentation<ColoredPointTNormal> point_representation;
 	PointCloudPerception test;
 	std::string test_file = "test_pcd_top.pcd";
-	//pcl::PointCloud<RGBD>::Ptr cloud(new pcl::PointCloud<RGBD>);
-	boost::shared_ptr<pcl::PointCloud<RGBD>> cloud(new pcl::PointCloud<RGBD>);
-	test.LoadPCDFile<RGBD>(test_file, cloud);
+	//pcl::PointCloud<ColoredPointT>::Ptr cloud(new pcl::PointCloud<ColoredPointT>);
+	boost::shared_ptr<pcl::PointCloud<ColoredPointT>> cloud(new pcl::PointCloud<ColoredPointT>);
+	test.LoadPCDFile<ColoredPointT>(test_file, cloud);
 	//test.OutlierRemoval(cloud);
 	//test.VisualizePointCloud(cloud);
 	// pcl::PointIndices::Ptr inliers (new pcl::PointIndices);
@@ -238,7 +267,7 @@ int main() {
 	std::cout << "Input stride size for image completion" << std::endl;
 	int stride;
 	std::cin >> stride;
-	test.ProjectRGBDPointCloudToCameraImagePlane(cloud, camera), stride;
+	test.ProjectColoredPointCloudToCameraImagePlane(cloud, camera), stride;
 
 	return 0;
 }
