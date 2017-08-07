@@ -41,3 +41,5 @@ target_link_libraries (test_perception_interface ${PCL_LIBRARIES} drake::drake $
 #add_executable (test_planar_tracking planar_rgb_pose_estimation.cc)
 #target_link_libraries (test_planar_tracking ${OpenCV_LIBS})
 
+add_executable (test_openni_comm openni_comm.cc)
+target_link_libraries (test_openni_comm ${OpenCV_LIBS} ${PCL_LIBRARIES})

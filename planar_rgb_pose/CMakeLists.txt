@@ -33,3 +33,4 @@ target_link_libraries (test_planar_tracking ${OpenCV_LIBS})
 
 add_executable (test_matching planar_rgb_pose_estimator.cc planar_rgb_model.cc)
 target_link_libraries (test_matching ${OpenCV_LIBS})
+

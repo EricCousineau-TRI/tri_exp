@@ -227,9 +227,9 @@ cv::Mat PointCloudPerception::ProjectColoredPointCloudToCameraImagePlane(
 					}
 				}
 				if (num_averages > 0) {
-					std::cout << mean_color << std::endl;
+					//std::cout << mean_color << std::endl;
 					mean_color = mean_color / num_averages;	
-					std::cout << mean_color << std::endl;
+					//std::cout << mean_color << std::endl;
 					projected_cv_img.at<cv::Vec3b>(i,j) = 
 						cv::Vec3b(round(mean_color(0)), round(mean_color(1)), round(mean_color(2)));
 				}
@@ -246,15 +246,15 @@ cv::Mat PointCloudPerception::ProjectColoredPointCloudToCameraImagePlane(
 
 
 
-int main() {
+int main(int argc, char** argv) {
 	//GeometryAlignmentRepresentation<ColoredPointTNormal> point_representation;
 	PointCloudPerception test;
-	std::string test_file = "test_pcd_top.pcd";
+	std::string test_file(argv[1]);// = "test_pcd_top.pcd";
 	//pcl::PointCloud<ColoredPointT>::Ptr cloud(new pcl::PointCloud<ColoredPointT>);
 	boost::shared_ptr<pcl::PointCloud<ColoredPointT>> cloud(new pcl::PointCloud<ColoredPointT>);
 	test.LoadPCDFile<ColoredPointT>(test_file, cloud);
-	//test.OutlierRemoval(cloud);
-	//test.VisualizePointCloud(cloud);
+	test.OutlierRemoval(cloud);
+	test.VisualizePointCloud(cloud);
 	// pcl::PointIndices::Ptr inliers (new pcl::PointIndices);
 	// Eigen::Vector4d plane_coeffs;
 	// test.FindPlane(cloud, &plane_coeffs, inliers);
