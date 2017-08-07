@@ -130,19 +130,45 @@ void PointCloudPerception::EstimateNormal(
 }
 
 
-template <typename T>
+template <typename T, typename T2>
 void PointCloudPerception::FusePointCloudPair(
 		const boost::shared_ptr<pcl::PointCloud<T>> src,  
     const boost::shared_ptr<pcl::PointCloud<T>> tgt, 
-    boost::shared_ptr<pcl::PointCloud<T>> combined, 
+    boost::shared_ptr<pcl::PointCloud<T2>> combined, 
     Eigen::Matrix4f* transform) {
-	 // First, estimate normal and curvture for each point cloud.
-	 boost::shared_ptr<pcl::PointCloud<pcl::Normal>> normals_src(
-		new pcl::PointCloud<pcl::Normal>);
-   boost::shared_ptr<pcl::PointCloud<pcl::Normal>> normals_tgt(
-		new pcl::PointCloud<pcl::Normal>);
+	// First, estimate normal and curvture for each point cloud.
+	boost::shared_ptr<pcl::PointCloud<pcl::Normal>> normals_src(
+	new pcl::PointCloud<pcl::Normal>);
+	boost::shared_ptr<pcl::PointCloud<pcl::Normal>> normals_tgt(
+	new pcl::PointCloud<pcl::Normal>);
+	double radius_normal_est = 0.02;
+	EstimateNormal(src, normals_src, radius_normal_est);
+	EstimateNormal(tgt, normals_tgt, radius_normal_est);
+	boost::shared_ptr<pcl::PointCloud<T2>> cloud_with_normal_src(
+		new pcl::PointCloud<T2>); 
+	boost::shared_ptr<pcl::PointCloud<T2>> cloud_with_normal_tgt(
+		new pcl::PointCloud<T2>); 
+	pcl::concatenatePointCloud(src, normals_src, cloud_with_normal_src);
+	pcl::concatenatePointCloud(tgt, normals_tgt, cloud_with_normal_tgt);
+	PointCloudPairRegistration reg;
+	reg.RegisterPointCloudPair(cloud_with_normal_src, cloud_with_normal_tgt,
+															combined, transform);
 
 }
+
+
+template <typename T, typename T2>
+void PointCloudPerception::FuseMultiPointClouds(
+    const std::vector< boost::shared_ptr<pcl::PointCloud<T>> > point_clouds,
+    boost::shared_ptr<pcl::PointCloud<T2>> combined_cloud) {
+	for (unsigned i = 1; i < point_clouds.size(); ++i) {
+		boost::shared_ptr<pcl::PointCloud<T2>> tmp_combined_cloud(new pcl::PointCloud<T2>);
+		FuseMultiPointClouds<T, T2>(point_clouds[0], point_clouds[i], tmp_combined_cloud);
+		*combined_cloud += * tmp_combined_cloud;
+	}
+}
+
+
 
 cv::Mat PointCloudPerception::ProjectColoredPointCloudToCameraImagePlane(
 	  const boost::shared_ptr<pcl::PointCloud<ColoredPointT>> cloud, const Camera camera,

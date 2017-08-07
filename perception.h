@@ -64,6 +64,7 @@ class PointCloudPerception {
       pcl::PCDReader reader;
       reader.read<T>(file_name, *cloud);
     }
+
     template <typename T>
     void DownSample(boost::shared_ptr<pcl::PointCloud<T>> cloud, 
                     double leaf_size = 0.005);
@@ -100,7 +101,7 @@ class PointCloudPerception {
     template <typename T>
     void EstimateNormal(const boost::shared_ptr<pcl::PointCloud<T>> cloud, 
       boost::shared_ptr<pcl::PointCloud<pcl::Normal>> normals, 
-      double radius = 0.03);
+      double radius = 0.02);
 
     // Projection point cloud onto a camera pose and generate opencv rgb image.
     // Note that the point cloud needs to be transformed to camera frame coordinate
@@ -113,14 +114,20 @@ class PointCloudPerception {
     // A transformation will be applied to the second point cloud (tgt) to the 
     // first point cloud (src). 
     // Note that the two point cloud needs to be roughly aligned already with 
-    // reasonable amount of intersection. 
-    template <typename T>
+    // reasonable amount of intersection.
+    // The output will have normals.
+    // Example T,T2 pair: <ColoredPointT, ColoredPointTNormal>, <PointT, PointTNormal>. 
+    template <typename T, typename T2>
     void FusePointCloudPair(const boost::shared_ptr<pcl::PointCloud<T>> src, 
-      const boost::shared_ptr<pcl::PointCloud<T>> tgt, 
-      boost::shared_ptr<pcl::PointCloud<T>> combined, 
-      Eigen::Matrix4f* transform);
+        const boost::shared_ptr<pcl::PointCloud<T>> tgt, 
+        boost::shared_ptr<pcl::PointCloud<T2>> combined, 
+        Eigen::Matrix4f* transform);
     
-    // Fuse multiple point clouds and normals. 
+    // Fuse multiple point clouds onto the first one. 
+    template <typename T, typename T2>
+    void FuseMultiPointClouds(
+        const std::vector< boost::shared_ptr<pcl::PointCloud<T>> > point_clouds,
+        boost::shared_ptr<pcl::PointCloud<T2>> combined);
 
   private:
 

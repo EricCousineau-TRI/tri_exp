@@ -66,6 +66,9 @@ class GeometryAlignmentRepresentation : public
 class PointCloudPairRegistration {
  public:
  	PointCloudPairRegistration(){};
+ 	// Given a pair of point clouds with normals, register the second point cloud
+ 	// with respect to the first, and return a combined point cloud and the 
+ 	// relative tranformation.
  	template <typename T>
  	void RegisterPointCloudPair(const boost::shared_ptr<pcl::PointCloud<T>> src, 
  	    const boost::shared_ptr<pcl::PointCloud<T>> tgt,
