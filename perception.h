@@ -17,6 +17,9 @@
 #include <pcl/features/normal_3d_omp.h>
 #include <pcl/features/integral_image_normal.h>
 
+#include <pcl/octree/octree_search.h>
+//#include <pcl/gpu/octree/octree.hpp>
+
 #include <opencv2/core/core.hpp>
 #include <opencv2/opencv.hpp>
 #include <opencv2/highgui/highgui.hpp>
@@ -60,10 +63,7 @@ class PointCloudPerception {
   	
     template <typename T>
   	void LoadPCDFile(std::string file_name, 
-  		boost::shared_ptr<pcl::PointCloud<T>> cloud) {
-      pcl::PCDReader reader;
-      reader.read<T>(file_name, *cloud);
-    }
+  		boost::shared_ptr<pcl::PointCloud<T>> cloud);
 
     template <typename T>
     void DownSample(boost::shared_ptr<pcl::PointCloud<T>> cloud, 

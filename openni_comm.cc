@@ -100,12 +100,12 @@ void OpenNiComm::cloud_cb_(const boost::shared_ptr<const pcl::PointCloud<pcl::Po
 }
 
 
-int main() {
-	OpenNiComm test;
-	test.Run();
-	test.GetCurrentDepthImage();
-	test.GetCurrentRGBImage();
-	pcl::PointCloud<pcl::PointXYZRGBA>::Ptr cloud = test.GetCurrentPointCloud();
-	pcl::io::savePCDFileASCII("test_openni_comm.pcd", *cloud);
-	test.Stop();
-}
+// int main() {
+// 	OpenNiComm test;
+// 	test.Run();
+// 	test.GetCurrentDepthImage();
+// 	test.GetCurrentRGBImage();
+// 	pcl::PointCloud<pcl::PointXYZRGBA>::Ptr cloud = test.GetCurrentPointCloud();
+// 	pcl::io::savePCDFileASCII("test_openni_comm.pcd", *cloud);
+// 	test.Stop();
+// }

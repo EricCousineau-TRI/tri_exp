@@ -3,21 +3,24 @@
 #include <pcl/console/time.h>
 
 template <typename T>
-void LoadPCDFile(std::string file_name, 
+void PointCloudPerception::LoadPCDFile(std::string file_name, 
 	boost::shared_ptr<pcl::PointCloud<T>> cloud) {
   pcl::PCDReader reader;
   reader.read<T>(file_name, *cloud);
   std::vector<int> indices;
   pcl::removeNaNFromPointCloud(*cloud,*cloud, indices);
+  std::cout << "remove Nan size" << indices.size() << std::endl;
 }
 
 template <typename T>
 void PointCloudPerception::DownSample(boost::shared_ptr<pcl::PointCloud<T>> cloud, 
 																			double leaf_size) {
+	std::cout << "Number of points before down sampling" << cloud->size() << std::endl;
 	pcl::VoxelGrid<T> grid;
 	grid.setLeafSize(leaf_size, leaf_size, leaf_size);
 	grid.setInputCloud(cloud);
 	grid.filter(*cloud);
+	std::cout << "Number of points after down sampling" << cloud->size() << std::endl;
 }
 
 template <typename T>
@@ -246,54 +249,99 @@ cv::Mat PointCloudPerception::ProjectColoredPointCloudToCameraImagePlane(
 
 
 
-int main(int argc, char** argv) {
-	//GeometryAlignmentRepresentation<ColoredPointTNormal> point_representation;
-	PointCloudPerception test;
-	std::string test_file(argv[1]);// = "test_pcd_top.pcd";
-	//pcl::PointCloud<ColoredPointT>::Ptr cloud(new pcl::PointCloud<ColoredPointT>);
-	boost::shared_ptr<pcl::PointCloud<ColoredPointT>> cloud(new pcl::PointCloud<ColoredPointT>);
-	test.LoadPCDFile<ColoredPointT>(test_file, cloud);
-	test.OutlierRemoval(cloud);
-	test.VisualizePointCloud(cloud);
-	// pcl::PointIndices::Ptr inliers (new pcl::PointIndices);
-	// Eigen::Vector4d plane_coeffs;
-	// test.FindPlane(cloud, &plane_coeffs, inliers);
-	// std::cout << plane_coeffs.transpose() << std::endl;
+// int main(int argc, char** argv) {
+// 	//GeometryAlignmentRepresentation<ColoredPointTNormal> point_representation;
+// 	pcl::console::TicToc tt;
 
-	boost::shared_ptr<pcl::PointCloud<pcl::Normal>> normals(
-		new pcl::PointCloud<pcl::Normal>);
-
-	pcl::console::TicToc tt;
-  tt.tic ();
-	//test.EstimateNormal(cloud, normals);
-	std::cout << tt.toc () / 1000.0 << std::endl;
-  //test.VisualizePointCloudAndNormal(cloud, normals);
-	std::cout << "Input 6 dof camera" << std::endl;
-	Eigen::VectorXd camera_pose(6);
-	for (int i = 0; i < 6; ++i) {
-		cin >> camera_pose(i);
-	}
-
-	Eigen::Matrix3f M_rot = (Eigen::AngleAxisf(camera_pose(3) / 180.0 * M_PI, Eigen::Vector3f::UnitX()) 
-    * Eigen::AngleAxisf(camera_pose(4) / 180.0 * M_PI, Eigen::Vector3f::UnitY()) 
-		* Eigen::AngleAxisf(camera_pose(5) / 180.0 * M_PI, Eigen::Vector3f::UnitZ())).toRotationMatrix();
-	Camera camera;
-	camera.pose(0,3) = camera_pose(0);
-	camera.pose(1,3) = camera_pose(1);
-	camera.pose(2,3) = camera_pose(2);
-	// camera.pose.translation() = camera_pose.head(3);
-	camera.pose.linear() = M_rot;
-
-	camera.fx = 570;
-	camera.fy = 570;
-	camera.img_height = 512;
-	camera.img_width = 512;
-	test.ApplyTransformToPointCloud(camera.pose.inverse(), cloud);
+// 	PointCloudPerception test;
+// 	std::string test_file(argv[1]);// = "test_pcd_top.pcd";
+// 	//pcl::PointCloud<ColoredPointT>::Ptr cloud(new pcl::PointCloud<ColoredPointT>);
+// 	boost::shared_ptr<pcl::PointCloud<ColoredPointT>> cloud(new pcl::PointCloud<ColoredPointT>);
+// 	test.LoadPCDFile<ColoredPointT>(test_file, cloud);
+// 	test.OutlierRemoval(cloud);
 	
-	std::cout << "Input stride size for image completion" << std::endl;
-	int stride;
-	std::cin >> stride;
-	test.ProjectColoredPointCloudToCameraImagePlane(cloud, camera), stride;
+// 	//test.DownSample(cloud);
+// 	boost::shared_ptr<pcl::PointCloud<pcl::Normal>> normals(
+// 		new pcl::PointCloud<pcl::Normal>);
 
-	return 0;
-}
+//   tt.tic ();
+// 	test.EstimateNormal(cloud, normals);
+// 	std::cout << tt.toc () / 1000.0 << std::endl;
+
+// 	tt.tic();
+// 	double resolution = 32.0;
+//   pcl::octree::OctreePointCloudSearch<pcl::PointXYZ> octree (resolution);
+//   boost::shared_ptr<pcl::PointCloud<PointT>> cloud2(new pcl::PointCloud<PointT>);
+//   pcl::copyPointCloud(*cloud, *cloud2);
+//   octree.setInputCloud (cloud2);
+//   octree.addPointsFromInputCloud ();
+//   PointT searchPoint;
+//   std::vector<int> pointIdxRadiusSearch;
+//   std::vector<float> pointRadiusSquaredDistance;
+//   double radius = 100;
+//   int tmp_num_round = 10000;
+//   for (int round = 0; round < tmp_num_round; ++round) {
+//   	int tmp_id = rand() % (cloud->size());
+//   	searchPoint.x = cloud->points[tmp_id].x;
+//   	searchPoint.y = cloud->points[tmp_id].y;
+// 		searchPoint.z = cloud->points[tmp_id].z;
+//   	octree.radiusSearch (searchPoint, radius, pointIdxRadiusSearch, 
+//   											pointRadiusSquaredDistance);
+//   	//std::cout << searchPoint.x << " " << searchPoint.y << " " << searchPoint.z << std::endl;
+// 		//std::cout << pointIdxRadiusSearch.size() << std::endl;
+// 		for (int i = 0; i < pointIdxRadiusSearch.size(); ++i) {
+// 			double dot_product = 0;
+// 			for (int j = 0; j < 3; ++j){
+// 				dot_product += (*normals)[i].normal[j] * (*normals)[tmp_id].normal[j];
+// 			}
+// 			// std::cout << "    "  <<   cloud->points[ pointIdxRadiusSearch[i] ].x 
+//    //              << " " << cloud->points[ pointIdxRadiusSearch[i] ].y 
+//    //              << " " << cloud->points[ pointIdxRadiusSearch[i] ].z 
+//    //              << " (squared distance: " << pointRadiusSquaredDistance[i] << ")" << std::endl;
+//       // Just to make sure the index is actually consistent.
+// 			// std::cout << "    "  <<   cloud2->points[ pointIdxRadiusSearch[i] ].x 
+//    //              << " " << cloud2->points[ pointIdxRadiusSearch[i] ].y 
+//    //              << " " << cloud2->points[ pointIdxRadiusSearch[i] ].z 
+//    //              << " (squared distance: " << pointRadiusSquaredDistance[i] << ")" << std::endl;
+// 		}
+// 	}
+// 	std::cout << "Elapsed time: " << tt.toc () / 1000.0 << std::endl;
+
+// 	test.VisualizePointCloud(cloud);
+
+// 	// pcl::PointIndices::Ptr inliers (new pcl::PointIndices);
+// 	// Eigen::Vector4d plane_coeffs;
+// 	// test.FindPlane(cloud, &plane_coeffs, inliers);
+// 	// std::cout << plane_coeffs.transpose() << std::endl;
+
+	
+//   //test.VisualizePointCloudAndNormal(cloud, normals);
+// 	std::cout << "Input 6 dof camera" << std::endl;
+// 	Eigen::VectorXd camera_pose(6);
+// 	for (int i = 0; i < 6; ++i) {
+// 		cin >> camera_pose(i);
+// 	}
+
+// 	Eigen::Matrix3f M_rot = (Eigen::AngleAxisf(camera_pose(3) / 180.0 * M_PI, Eigen::Vector3f::UnitX()) 
+//     * Eigen::AngleAxisf(camera_pose(4) / 180.0 * M_PI, Eigen::Vector3f::UnitY()) 
+// 		* Eigen::AngleAxisf(camera_pose(5) / 180.0 * M_PI, Eigen::Vector3f::UnitZ())).toRotationMatrix();
+// 	Camera camera;
+// 	camera.pose(0,3) = camera_pose(0);
+// 	camera.pose(1,3) = camera_pose(1);
+// 	camera.pose(2,3) = camera_pose(2);
+// 	// camera.pose.translation() = camera_pose.head(3);
+// 	camera.pose.linear() = M_rot;
+
+// 	camera.fx = 570;
+// 	camera.fy = 570;
+// 	camera.img_height = 512;
+// 	camera.img_width = 512;
+// 	test.ApplyTransformToPointCloud(camera.pose.inverse(), cloud);
+	
+// 	std::cout << "Input stride size for image completion" << std::endl;
+// 	int stride;
+// 	std::cin >> stride;
+// 	test.ProjectColoredPointCloudToCameraImagePlane(cloud, camera), stride;
+
+// 	return 0;
+// }

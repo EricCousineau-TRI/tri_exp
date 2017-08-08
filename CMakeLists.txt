@@ -22,6 +22,7 @@ include_directories(
 ${OpenCV_INCLUDE_DIRS}
 ${apriltags_INCLUDE_DIR}
 )
+link_directories(/home/user/gurobi702/linux64/lib)
 
 add_definitions(${PCL_DEFINITIONS} -std=c++11 -g -O2 -fext-numeric-literals)
 
@@ -32,14 +33,20 @@ MESSAGE(STATUS "OpenCV_INCLUDE_DIR" ${OpenCV_INCLUDE_DIRS})
 add_executable (kuka_camera_calibrate kuka_camera_calibrate.cc)
 target_link_libraries (kuka_camera_calibrate ${PCL_LIBRARIES} ${OpenCV_LIBS} apriltags drake::drake drake::drake-lcmtypes-cpp)
 
+add_executable (jjz_controller_main jjz_controller_main.cc)
+target_link_libraries (jjz_controller_main drake::drake drake::drake-lcmtypes-cpp libgurobi70.so)
+
 #add_executable (pcl_save_pcd pcl_save_pcd.cc)
 #target_link_libraries (pcl_save_pcd ${PCL_LIBRARIES} drake::drake)
 
-add_executable (test_perception_interface perception.cc point_cloud_registration.cc)
-target_link_libraries (test_perception_interface ${PCL_LIBRARIES} drake::drake ${OpenCV_LIBS})
+add_library(lib_perception perception.cc point_cloud_registration.cc openni_comm.cc)
 
-#add_executable (test_planar_tracking planar_rgb_pose_estimation.cc)
-#target_link_libraries (test_planar_tracking ${OpenCV_LIBS})
+add_executable (test_perception_interface perception.cc)
+target_link_libraries (test_perception_interface lib_perception ${PCL_LIBRARIES} ${OpenCV_LIBS})
 
-add_executable (test_openni_comm openni_comm.cc)
-target_link_libraries (test_openni_comm ${OpenCV_LIBS} ${PCL_LIBRARIES})
+add_executable (test_hand_eye hand_eye.cc)
+target_link_libraries(test_hand_eye lib_perception drake::drake ${PCL_LIBRARIES} ${OpenCV_LIBS})
+
+
+#add_executable (test_openni_comm openni_comm.cc)
+#target_link_libraries (test_openni_comm ${OpenCV_LIBS} ${PCL_LIBRARIES})
