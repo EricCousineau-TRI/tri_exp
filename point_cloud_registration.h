@@ -14,6 +14,8 @@
 #include <pcl/registration/icp_nl.h>
 #include <pcl/registration/transforms.h>
 
+typedef pcl::PointXYZRGBA ColoredPointT;
+typedef pcl::PointXYZ PointT;
 typedef pcl::PointXYZRGBNormal ColoredPointTNormal;
 typedef pcl::PointNormal PointTNormal;
 

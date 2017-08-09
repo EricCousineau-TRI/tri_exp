@@ -32,8 +32,7 @@
 
 #include <cmath>
 
-typedef pcl::PointXYZRGBA ColoredPointT;
-typedef pcl::PointXYZ PointT;
+
 
 // This class provides the interface to several PCL algorithms. 
 // 1) Statistical removal of outliers. 
@@ -44,7 +43,7 @@ typedef pcl::PointXYZ PointT;
 // 6) Project the point cloud onto a plane  
 
 
-
+#pragma once
 
 struct Camera
 {
@@ -123,7 +122,8 @@ class PointCloudPerception {
         boost::shared_ptr<pcl::PointCloud<T2>> combined, 
         Eigen::Matrix4f* transform);
     
-    // Fuse multiple point clouds onto the first one. 
+    // Fuse multiple point clouds seqentially. Every consecutive pairs are fused
+    // and added to the combined one.
     template <typename T, typename T2>
     void FuseMultiPointClouds(
         const std::vector< boost::shared_ptr<pcl::PointCloud<T>> > point_clouds,

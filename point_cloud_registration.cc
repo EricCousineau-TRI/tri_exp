@@ -63,7 +63,7 @@ void PointCloudPairRegistration::RegisterPointCloudPair(
   // Get the transformation from target to source
   Eigen::Matrix4f targetToSource = Ti.inverse();
 
-  // Transform target back in source frame
+  // Transform target onto source frame
   pcl::transformPointCloud (*tgt, *output, targetToSource);
 
   //add the source to the transformed target

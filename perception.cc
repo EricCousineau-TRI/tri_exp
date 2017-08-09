@@ -164,10 +164,16 @@ template <typename T, typename T2>
 void PointCloudPerception::FuseMultiPointClouds(
     const std::vector< boost::shared_ptr<pcl::PointCloud<T>> > point_clouds,
     boost::shared_ptr<pcl::PointCloud<T2>> combined_cloud) {
+	Eigen::Affine3f global_tf_affine = Eigen::Affine3f::Identity();	
+	//Eigen::Matrix4f global_transform = Eigen::Matrix4f::Identity();
 	for (unsigned i = 1; i < point_clouds.size(); ++i) {
 		boost::shared_ptr<pcl::PointCloud<T2>> tmp_combined_cloud(new pcl::PointCloud<T2>);
-		FuseMultiPointClouds<T, T2>(point_clouds[0], point_clouds[i], tmp_combined_cloud);
-		*combined_cloud += * tmp_combined_cloud;
+		Eigen::Matrix4f relative_transform;
+		FusePointCloudPair<T, T2>(point_clouds[i-1], point_clouds[i], 
+				tmp_combined_cloud, &relative_transform);
+		global_tf_affine.matrix() = global_tf_affine.matrix() * relative_transform;
+		ApplyTransformToPointCloud(tmp_combined_cloud, global_tf_affine);
+		*combined_cloud += *tmp_combined_cloud;
 	}
 }
 

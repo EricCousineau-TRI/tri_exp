@@ -39,14 +39,21 @@ target_link_libraries (jjz_controller_main drake::drake drake::drake-lcmtypes-cp
 #add_executable (pcl_save_pcd pcl_save_pcd.cc)
 #target_link_libraries (pcl_save_pcd ${PCL_LIBRARIES} drake::drake)
 
-add_library(lib_perception perception.cc point_cloud_registration.cc openni_comm.cc)
-
-add_executable (test_perception_interface perception.cc)
-target_link_libraries (test_perception_interface lib_perception ${PCL_LIBRARIES} ${OpenCV_LIBS})
-
-add_executable (test_hand_eye hand_eye.cc)
-target_link_libraries(test_hand_eye lib_perception drake::drake ${PCL_LIBRARIES} ${OpenCV_LIBS})
-
-
 #add_executable (test_openni_comm openni_comm.cc)
 #target_link_libraries (test_openni_comm ${OpenCV_LIBS} ${PCL_LIBRARIES})
+
+#add_executable (test_perception_interface perception.cc point_cloud_registration.cc)
+#target_link_libraries (test_perception_interface ${PCL_LIBRARIES} ${OpenCV_LIBS})
+
+add_library(lib_perception perception.cc point_cloud_registration.cc)
+target_link_libraries(lib_perception ${PCL_LIBRARIES} ${OpenCV_LIBS})
+
+add_executable (test_hand_eye hand_eye.cc perception.cc)
+target_link_libraries(test_hand_eye lib_perception drake::drake ${PCL_LIBRARIES} ${OpenCV_LIBS})
+
+#add_library(lib_hand_eye hand_eye.cc perception.cc point_cloud_registration.cc openni_comm.cc)
+#target_link_libraries(lib_hand_eye drake::drake ${PCL_LIBRARIES} ${OpenCV_LIBS})
+
+#add_executable (test_fusion action_scan.cc hand_eye.cc perception.cc point_cloud_registration.cc openni_comm.cc)
+#target_link_libraries(test_fusion drake::drake ${PCL_LIBRARIES} ${OpenCV_LIBS})
+
