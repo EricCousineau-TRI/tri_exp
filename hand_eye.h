@@ -46,7 +46,7 @@ class HandEye {
  			double duration = 5.0);
 
 	void Scan(OpenNiComm& camera_interface, 
-			 PointCloudPerception & perception_proc, 
+			 PointCloudPerception<ColoredPointT, ColoredPointTNormal> & perception_proc, 
 			const std::vector<Eigen::VectorXd>& joint_angles, 
 			double duration_per_move, 
 			boost::shared_ptr<pcl::PointCloud<ColoredPointTNormal>> fused_cloud);	

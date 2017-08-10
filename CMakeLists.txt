@@ -24,7 +24,7 @@ ${apriltags_INCLUDE_DIR}
 )
 link_directories(/home/user/gurobi702/linux64/lib)
 
-add_definitions(${PCL_DEFINITIONS} -std=c++11 -g -O2 -fext-numeric-literals)
+add_definitions(${PCL_DEFINITIONS} -std=c++11 -g -fext-numeric-literals)
 
 #MESSAGE(STATUS "PCL_INCLUDE_DIR: " ${PCL_INCLUDE_DIRS})
 #MESSAGE(STATUS "PCL_LIB_DIR: " ${PCL_LIBRARY_DIRS})
@@ -43,12 +43,12 @@ target_link_libraries (jjz_controller_main drake::drake drake::drake-lcmtypes-cp
 #target_link_libraries (test_openni_comm ${OpenCV_LIBS} ${PCL_LIBRARIES})
 
 #add_executable (test_perception_interface perception.cc point_cloud_registration.cc)
-#target_link_libraries (test_perception_interface ${PCL_LIBRARIES} ${OpenCV_LIBS})
+#target_link_libraries (test_perception_interface ${PCL_LIBRARIES} ${OpenCV_LIBS} drake::drake)
 
-add_library(lib_perception perception.cc point_cloud_registration.cc)
+add_library(lib_perception perception.cc point_cloud_registration.cc openni_comm.cc)
 target_link_libraries(lib_perception ${PCL_LIBRARIES} ${OpenCV_LIBS})
 
-add_executable (test_hand_eye hand_eye.cc perception.cc)
+add_executable (test_hand_eye hand_eye.cc)
 target_link_libraries(test_hand_eye lib_perception drake::drake ${PCL_LIBRARIES} ${OpenCV_LIBS})
 
 #add_library(lib_hand_eye hand_eye.cc perception.cc point_cloud_registration.cc openni_comm.cc)

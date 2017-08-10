@@ -12,13 +12,13 @@
 class OpenNiComm{
  public:
   OpenNiComm();
-  boost::shared_ptr<pcl::PointCloud<pcl::PointXYZRGBA>> GetCurrentPointCloud();
+  void GetCurrentPointCloud(boost::shared_ptr<pcl::PointCloud<pcl::PointXYZRGB>>);
   cv::Mat GetCurrentRGBImage();
   cv::Mat GetCurrentDepthImage();
 
-  void Run() {
-    camera_interface_->start ();
-  }
+  // void Run() {
+  //   camera_interface_->start ();
+  // }
 
   void Stop() {
     camera_interface_->stop();
@@ -41,7 +41,7 @@ class OpenNiComm{
 
   // The stored values get deep copied in the callback function whenver 
   // request_to_captured set to be true.
-  boost::shared_ptr<pcl::PointCloud<pcl::PointXYZRGBA>> stored_cloud_;
+  boost::shared_ptr<pcl::PointCloud<pcl::PointXYZRGB>> stored_cloud_;
   //boost::shared_ptr<pcl::io::Image> stored_image;
   //boost::shared_ptr<pcl::io::DepthImage> stored_depth_image;
   // Type CV_8UC3.
