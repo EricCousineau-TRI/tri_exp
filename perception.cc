@@ -79,7 +79,9 @@ void PointCloudPerception<T, T2>::VisualizePointCloudDrake(
   	message.channels[0][i] = point.r;
   	message.channels[1][i] = point.g;
   	message.channels[2][i] = point.b;
-    message.points[i] = {point.x, point.y, point.z};
+    Eigen::Vector3f pt_W =
+        (X_WC * Eigen::Vector3d(point.x, point.y, point.z)).cast<float>();
+    message.points[i] = {pt_W[0], pt_W[1], pt_W[2]};
   }
   message.n_points = message.points.size();
   std::vector<uint8_t> bytes(message.getEncodedSize());
