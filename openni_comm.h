@@ -5,6 +5,8 @@
 #include <opencv2/opencv.hpp>
 
 #include <boost/thread/thread.hpp>
+#include <mutex>
+#include <thread>
 
 
 // This class wraps over the openni grabber class to provide services to access
@@ -48,4 +50,5 @@ class OpenNiComm{
   cv::Mat stored_image_;
   // Type CV_16UC1
   cv::Mat stored_depth_image_;
+  std::mutex mtx_;
 };

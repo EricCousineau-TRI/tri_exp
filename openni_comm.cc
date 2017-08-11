@@ -1,6 +1,5 @@
 #include "openni_comm.h"
 #include <opencv2/highgui/highgui.hpp>
-
 OpenNiComm::OpenNiComm() {
 	camera_interface_ = new pcl::io::OpenNI2Grabber();
   stored_cloud_ = boost::shared_ptr<pcl::PointCloud<pcl::PointXYZRGB>>(
@@ -23,24 +22,29 @@ OpenNiComm::OpenNiComm() {
   updated_depth_ = false;
   updated_pointcloud_ = false;
 
-   camera_interface_->start ();
+  camera_interface_->start ();
 
 };
 
 void OpenNiComm::GetCurrentPointCloud(
  		boost::shared_ptr<pcl::PointCloud<pcl::PointXYZRGB>> output_cloud) {
+	std::unique_lock<std::mutex> lock(mtx_);
 	request_to_capture_pointcloud_ = true;
 	// Wait until the point cloud is acquired.
 	while (!updated_pointcloud_){
 		// Sleep the main thread to wait for device call back function.
 		//boost::this_thread::sleep (boost::posix_time::seconds (0.001));
+		lock.unlock();
 		usleep(0.01 * 1e+6);
+		lock.lock();
 	};
 	request_to_capture_pointcloud_ = false;
 	updated_pointcloud_ = false;
  	//output_cloud = boost::shared_ptr<pcl::PointCloud<pcl::PointXYZRGB>>(
  	//	new pcl::PointCloud<pcl::PointXYZRGB>);
+ 	//mtx_.lock();
 	pcl::copyPointCloud(*stored_cloud_, *output_cloud);
+	//mtx_.unlock();
 	std::cout << "Get cloud size: " << output_cloud->size();
 	//return stored_cloud_;
 }
@@ -101,8 +105,10 @@ void OpenNiComm::rgb_depth_image_cb_(const boost::shared_ptr<pcl::io::Image>& rg
 }
 
 void OpenNiComm::cloud_cb_(const boost::shared_ptr<const pcl::PointCloud<pcl::PointXYZRGBA>> & cloud) {
-
+	std::lock_guard<std::mutex> lock(mtx_);
 	 if (request_to_capture_pointcloud_) {
+	   //mtx_.lock();
+	
  	   stored_cloud_->resize(cloud->size());
  	   std::cout << "cloud cb" << std::endl;
  	   for (int i = 0; i < cloud->size(); ++i) {
@@ -114,6 +120,7 @@ void OpenNiComm::cloud_cb_(const boost::shared_ptr<const pcl::PointCloud<pcl::Po
  	     stored_cloud_->points[i].b = cloud->points[i].b;
  	   }
  	   updated_pointcloud_ = true;
+ 	   //mtx_.unlock();
      std::cout << "cloud cb completead" << std::endl;
 	 }
 }

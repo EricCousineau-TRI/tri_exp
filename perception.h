@@ -101,7 +101,7 @@ class PointCloudPerception {
     // Otherwise we use plain covariance matrix estimation with omp multi threading.
     void EstimateNormal(const boost::shared_ptr<pcl::PointCloud<T>> cloud,
       boost::shared_ptr<pcl::PointCloud<pcl::Normal>> normals,
-      double radius = 0.02);
+      double radius = 0.01);
 
     // Projection point cloud onto a camera pose and generate opencv rgb image.
     // Note that the point cloud needs to be transformed to camera frame coordinate
@@ -203,14 +203,14 @@ class PointCloudPerception {
         boost::shared_ptr<pcl::PointCloud<T2>> tmp_combined_cloud(new pcl::PointCloud<T2>);
         Eigen::Matrix4f relative_transform;
         //std::cout << point_clouds[i-1]->size() << std::endl;
-        FusePointCloudPair(point_clouds[1], point_clouds[i],
+        FusePointCloudPair(point_clouds[1], point_clouds[i],  
             tmp_combined_cloud, &relative_transform);
-        global_tf_affine.matrix() = global_tf_affine.matrix() * relative_transform;
-        ApplyTransformToCombinedPointCloud(global_tf_affine, tmp_combined_cloud);
-        *combined_cloud += *tmp_combined_cloud;
+        // global_tf_affine.matrix() = global_tf_affine.matrix() * relative_transform;
+        // ApplyTransformToCombinedPointCloud(global_tf_affine, tmp_combined_cloud);
+        // *combined_cloud += *tmp_combined_cloud;
         std::string f_name = "test" + std::to_string(i) + ".pcd";
-        pcl::io::savePCDFileASCII(f_name, *combined_cloud);
-       
+        pcl::io::savePCDFileASCII(f_name, *tmp_combined_cloud);
+        *combined_cloud += *tmp_combined_cloud;
       }
     }
 
