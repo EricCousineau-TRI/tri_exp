@@ -1,5 +1,7 @@
 #include "point_cloud_registration.h"
 
+#include "drake/lcm/drake_lcm.h"
+
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
 #include <pcl/common/transforms.h>
@@ -74,6 +76,13 @@ class PointCloudPerception {
     // Display the point cloud until 'q' key is pressed.
     void VisualizePointCloud(const boost::shared_ptr<pcl::PointCloud<ColoredPointT>> cloud,
   		Eigen::Affine3f tf = Eigen::Affine3f::Identity());
+
+    // Display a RGB point cloud in drake-visualizer in frame `C`, given its
+    // pose relative to the world frame `W`.
+    void VisualizePointCloudDrake(
+      const boost::shared_ptr<pcl::PointCloud<ColoredPointT>> cloud,
+      Eigen::Isometry3d X_WC = Eigen::Isometry3d::Identity(),
+      const std::string& suffix = "RGBD");
 
     // Todo (Jiaji): refractor and redesign to fork a new thread just for visualization.
     void VisualizePointCloudAndNormal(const boost::shared_ptr<pcl::PointCloud<ColoredPointT>> cloud,
@@ -215,5 +224,5 @@ class PointCloudPerception {
     }
 
   private:
-
+    drake::lcm::DrakeLcm lcm_;
 };
