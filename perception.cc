@@ -47,7 +47,7 @@ void PointCloudPerception<T, T2>::VisualizePointCloud(
     const boost::shared_ptr<pcl::PointCloud<ColoredPointT>>cloud, Eigen::Affine3f tf) {
 	std::cout << "open up viewer" << std::endl;
   pcl::visualization::PCLVisualizer viewer("Point Cloud Visualization");
-	viewer.addCoordinateSystem(1.0, tf);
+	viewer.addCoordinateSystem(0.2, tf);
 	pcl::visualization::PointCloudColorHandlerRGBField<ColoredPointT> rgb(cloud);
 	std::cout << "!!" << std::endl;
 	viewer.addPointCloud(cloud, rgb, "Cloud");
@@ -64,7 +64,7 @@ void PointCloudPerception<T, T2>::VisualizePointCloudAndNormal(
     boost::shared_ptr<pcl::PointCloud<pcl::Normal>> normals,
     Eigen::Affine3f tf) {
 	pcl::visualization::PCLVisualizer viewer("Point Cloud Visualization");
-	viewer.addCoordinateSystem(1.0, tf);
+	viewer.addCoordinateSystem(0.2, tf);
 	pcl::visualization::PointCloudColorHandlerRGBField<ColoredPointT> rgb(cloud);
 	viewer.addPointCloud(cloud, rgb, "Cloud");
 
@@ -73,6 +73,16 @@ void PointCloudPerception<T, T2>::VisualizePointCloudAndNormal(
   while (!viewer.wasStopped ()) {
     viewer.spinOnce ();
   }
+}
+
+template <typename T, typename T2>
+void PointCloudPerception<T, T2>::SeparatePointsAndNormals(
+    const boost::shared_ptr<pcl::PointCloud<T2>> points_and_normal, 
+    boost::shared_ptr<pcl::PointCloud<T>> points, 
+    boost::shared_ptr<pcl::PointCloud<pcl::Normal>> normals) {
+	pcl::copyPointCloud(*points_and_normal, *points);
+	pcl::copyPointCloud(*points_and_normal, *normals);
+
 }
 
 template <typename T, typename T2>

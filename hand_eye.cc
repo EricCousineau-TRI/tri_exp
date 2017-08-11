@@ -258,12 +258,12 @@ int main() {
 	
   boost::shared_ptr<pcl::PointCloud<ColoredPointTNormal>> fused_cloud (
   		new pcl::PointCloud<ColoredPointTNormal>);
-  // OpenNiComm camera_interface;
-  // hand_eye_system.Scan(camera_interface, perception_proc, 
-  //  		joint_targets, duration_movement, fused_cloud);
-  // camera_interface.Stop();
+  OpenNiComm camera_interface;
+  hand_eye_system.Scan(camera_interface, perception_proc, 
+   		joint_targets, duration_movement, fused_cloud);
+  camera_interface.Stop();
 
-  doMain(perception_proc, fused_cloud);
+  //doMain(perception_proc, fused_cloud);
   pcl::io::savePCDFileASCII("test_fused.pcd", *fused_cloud);
   
   // hand_eye_system.MoveRobotJointStraightLine(joint_target1, duration_movement);

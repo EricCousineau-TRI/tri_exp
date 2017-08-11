@@ -80,6 +80,11 @@ class PointCloudPerception {
       boost::shared_ptr<pcl::PointCloud<pcl::Normal>> normals,
       Eigen::Affine3f tf = Eigen::Affine3f::Identity());
 
+    void SeparatePointsAndNormals(
+      const boost::shared_ptr<pcl::PointCloud<T2>> points_and_normal, 
+      boost::shared_ptr<pcl::PointCloud<T>> points, 
+      boost::shared_ptr<pcl::PointCloud<pcl::Normal>> normals);
+
     //template <typename T2>
     void ApplyTransformToPointCloud(Eigen::Affine3f tf,
   		boost::shared_ptr<pcl::PointCloud<T>> cloud);
