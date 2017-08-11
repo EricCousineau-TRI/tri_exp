@@ -2,6 +2,8 @@
 #include <ctime>
 #include <pcl/console/time.h>
 
+#include <bot_core/pointcloud_t.hpp>
+
 template <typename T, typename T2>
 void PointCloudPerception<T, T2>::LoadPCDFile(std::string file_name,
 	boost::shared_ptr<pcl::PointCloud<T>> cloud) {
@@ -56,6 +58,33 @@ void PointCloudPerception<T, T2>::VisualizePointCloud(
   while (!viewer.wasStopped ()) {
     viewer.spinOnce ();
   }
+}
+
+template <typename T, typename T2>
+void VisualizePointCloudDrake(
+      const boost::shared_ptr<pcl::PointCloud<ColoredPointT>> cloud,
+      Eigen::Isometry3d X_WC = Eigen::Isometry3d::Identity(),
+      const std::string& suffix) {
+  bot_core::pointcloud_t message;
+  message.points.clear();
+  message.frame_id = "world";
+  message.n_points = cloud->points.size();
+  message.points.resize(message.n_points);
+  // See: director.drakevisualizer, DrakeVisualier.onPointCloud
+  message.n_channels = 3;
+  message.channel_names = {"r", "g", "b"};
+  message.channels.resize(3, std::vector<float>(message.n_points));
+  for (int i = 0; i < message.n_points; ++i) {
+  	const auto& point = cloud->points[i];
+  	message.channels[0][i] = point.r;
+  	message.channels[1][i] = point.g;
+  	message.channels[2][i] = point.b;
+    message.points[i] = {point.x, point.y, point.z};
+  }
+  message.n_points = message.points.size();
+  std::vector<uint8_t> bytes(message.getEncodedSize());
+  message.encode(bytes.data(), 0, bytes.size());
+  lcm_.Publish("DRAKE_POINTCLOUD_" + suffix, bytes.data(), bytes.size());
 }
 
 template <typename T, typename T2>
