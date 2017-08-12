@@ -33,8 +33,8 @@ MESSAGE(STATUS "OpenCV_INCLUDE_DIR" ${OpenCV_INCLUDE_DIRS})
 add_executable (kuka_camera_calibrate kuka_camera_calibrate.cc)
 target_link_libraries (kuka_camera_calibrate ${PCL_LIBRARIES} ${OpenCV_LIBS} apriltags drake::drake drake::drake-lcmtypes-cpp)
 
-add_executable (jjz_controller_main jjz_controller_main.cc)
-target_link_libraries (jjz_controller_main drake::drake drake::drake-lcmtypes-cpp libgurobi70.so)
+#add_executable (jjz_controller_main jjz_controller_main.cc)
+#target_link_libraries (jjz_controller_main drake::drake drake::drake-lcmtypes-cpp #libgurobi70.so)
 
 #add_executable (pcl_save_pcd pcl_save_pcd.cc)
 #target_link_libraries (pcl_save_pcd ${PCL_LIBRARIES} drake::drake)

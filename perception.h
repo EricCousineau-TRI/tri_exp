@@ -11,6 +11,7 @@
 #include <pcl/filters/statistical_outlier_removal.h>
 #include <pcl/filters/filter.h>
 #include <pcl/filters/voxel_grid.h>
+#include <pcl/filters/extract_indices.h>
 
 #include <pcl/io/pcd_io.h>
 #include <pcl/features/normal_3d.h>
@@ -64,12 +65,25 @@ class PointCloudPerception {
   	void LoadPCDFile(std::string file_name,
   		boost::shared_ptr<pcl::PointCloud<T>> cloud);
 
+
     void DownSample(boost::shared_ptr<pcl::PointCloud<T>> cloud,
                     double leaf_size = 0.002);
 
     void CutWithWorkSpaceConstraints(boost::shared_ptr<pcl::PointCloud<T>> cloud,
         const Eigen::Vector3f & min_range, const Eigen::Vector3f& max_range);
 
+    void FilterPointsWithEmptyNormals(boost::shared_ptr<pcl::PointCloud<T2>> cloud);
+
+    void SubtractTable(boost::shared_ptr<pcl::PointCloud<T>> cloud);
+
+
+    // Find a bounding box to the current point cloud with binary search.
+    // The reason for cover_ratio not equals to 1 is to be robust to outliers.
+    // Top left corner is (xmax, ymax, zmax), lower right corner is (xmin, ymin, zmin).
+    void FindBoundingBox(const boost::shared_ptr<pcl::PointCloud<T>> cloud,
+        Eigen::Vector3f* center, Eigen::Vector3f* top_right_corner,
+        Eigen::Vector3f* lower_left_corner, double cover_ratio = 0.95);
+    //void SubtractTable(boost::shared_ptr<pcl::PointCloud<T2>> cloud);
 
     // Display the point cloud until 'q' key is pressed.
     void VisualizePointCloud(const boost::shared_ptr<pcl::PointCloud<ColoredPointT>> cloud,

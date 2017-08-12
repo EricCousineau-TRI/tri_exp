@@ -1,6 +1,7 @@
 #include "perception.h"
 #include <ctime>
 #include <pcl/console/time.h>
+#include <pcl/common/pca.h>
 
 template <typename T, typename T2>
 void PointCloudPerception<T, T2>::LoadPCDFile(std::string file_name,
@@ -12,6 +13,7 @@ void PointCloudPerception<T, T2>::LoadPCDFile(std::string file_name,
   std::cout << "remove Nan size" << indices.size() << std::endl;
 }
 
+
 template <typename T, typename T2>
 void PointCloudPerception<T, T2>::DownSample(boost::shared_ptr<pcl::PointCloud<T>> cloud,
 																			double leaf_size) {
@@ -22,6 +24,32 @@ void PointCloudPerception<T, T2>::DownSample(boost::shared_ptr<pcl::PointCloud<T
 	grid.filter(*cloud);
 	std::cout << "Number of points after down sampling" << cloud->size() << std::endl;
 }
+
+template <typename T, typename T2>
+void PointCloudPerception<T, T2>::FilterPointsWithEmptyNormals(
+		boost::shared_ptr<pcl::PointCloud<T2>> cloud) {
+
+	int num_points = cloud->size();
+  pcl::PointIndices::Ptr inliers(new pcl::PointIndices ());
+	for (int i = 0; i < num_points; ++i) {
+		bool has_normal = true;
+		for (int j = 0; j < 3; ++j) {
+			if (!((cloud->points[i].normal[j] >= -1 && cloud->points[i].normal[j] <= 1))) {
+				has_normal = false;
+			}
+		}
+		if (has_normal) {
+			inliers->indices.push_back(i);
+		}
+	}
+  pcl::ExtractIndices<T2> extract;
+  extract.setInputCloud (cloud);
+  extract.setIndices (inliers);
+  // Keep the inlier points;
+  extract.setNegative (false);
+  extract.filter (*cloud);
+}
+
 
 template <typename T, typename T2>
 void PointCloudPerception<T, T2>::CutWithWorkSpaceConstraints(
@@ -84,6 +112,142 @@ void PointCloudPerception<T, T2>::SeparatePointsAndNormals(
 	pcl::copyPointCloud(*points_and_normal, *normals);
 
 }
+
+template <typename T, typename T2>
+void PointCloudPerception<T, T2>::SubtractTable(
+		boost::shared_ptr<pcl::PointCloud<T>> cloud) {
+	  // Get rid of the table.
+  pcl::PointIndices::Ptr inliers(new pcl::PointIndices ());
+  pcl::ExtractIndices<T> extract;
+  extract.setInputCloud (cloud);
+  extract.setIndices (inliers);
+  extract.setNegative (true);
+  extract.filter (*cloud);
+}
+
+
+
+template <typename T, typename T2>
+void PointCloudPerception<T, T2>::FindBoundingBox(
+		const boost::shared_ptr<pcl::PointCloud<T>> cloud,
+		Eigen::Vector3f* center, Eigen::Vector3f* top_left_corner, 
+		Eigen::Vector3f* lower_right_corner, double cover_ratio) {
+	int num_pts = cloud->size();
+	double left_scale = 0;
+	double right_scale = 1.0;
+	double eps_diff = 1e-4;
+	// Eigen uses 4f for its interface.
+	Eigen::Vector4f min_pt, max_pt;
+	Eigen::Vector4f mid_pt;
+	pcl::compute3DCentroid(*cloud, mid_pt);
+  // for (int i = 0; i < cloud->size(); ++i) {
+  // 	mid_pt(0) += cloud->points[i].x;
+  // 	mid_pt(1) += cloud->points[i].y;
+  // 	mid_pt(2) += cloud->points[i].z;
+  // }
+  
+  // mid_pt = mid_pt / cloud->size();
+	// Compute average distance to the center.
+	double avg_dist = 0;
+	std::vector<double> all_dists(num_pts);
+	std::vector<double> all_dists_cp(num_pts);
+	for (int i = 0; i < cloud->size(); ++i) {
+		Eigen::Vector4f pt;
+		pt[0] = float(cloud->points[i].x);
+		pt[1] = float(cloud->points[i].y);
+		pt[2] = float(cloud->points[i].z);
+		pt[3] = 0; 
+		all_dists[i] = (pt - mid_pt).norm();
+		all_dists_cp[i] = (pt - mid_pt).norm();
+		avg_dist = avg_dist + all_dists[i] ;
+	}
+	avg_dist = avg_dist / cloud->size();
+	// Sort the distances and only keep the first 95% for computation of initial
+	// bounding box. Update the middle point.
+	sort(all_dists.begin(), all_dists.end());
+	int index_threshold = std::min(int(floor(num_pts * cover_ratio)), num_pts - 1);
+	double dist_threshold = all_dists[index_threshold];
+	std::vector<int> remaining_index;
+	mid_pt = Eigen::Vector4f::Zero();
+	for (int i = 0; i < num_pts; ++i) {
+		if (all_dists_cp[i] < dist_threshold) {
+			remaining_index.push_back(i);
+		}
+	}
+	pcl::compute3DCentroid(*cloud, remaining_index, mid_pt);
+	pcl::PCA<T> pca;
+	pca.setInputCloud(cloud);
+	Eigen::Matrix3f eigen_vectors = pca.getEigenVectors();
+	std::cout << "PCAs:" << std::endl;
+	std::cout << eigen_vectors << std::endl;
+	boost::shared_ptr<pcl::PointCloud<T>> cloud_projected (new pcl::PointCloud<T>); 
+	pca.project(*cloud, *cloud_projected);
+
+	pcl::getMinMax3D(*cloud_projected, remaining_index, min_pt, max_pt);
+	T pt_projected_min;
+	T pt_projected_max;
+	pt_projected_min.x = min_pt(0);
+	pt_projected_min.y = min_pt(1);
+	pt_projected_min.z = min_pt(2);
+	pt_projected_max.x = max_pt(0);
+	pt_projected_max.y = max_pt(1);
+	pt_projected_max.z = max_pt(2);
+
+	std::cout << pt_projected_min << std::endl;
+	std::cout << pt_projected_max << std::endl;
+	std::cout << "----------------" << std::endl;
+	T pt_min, pt_max;
+	pca.reconstruct(pt_projected_min, pt_min);
+	pca.reconstruct(pt_projected_max, pt_max);
+	std::cout << pt_min << std::endl;
+	std::cout << pt_max << std::endl; 
+
+	*top_left_corner = Eigen::Vector3f(pt_max.x,pt_max.y,pt_max.z);
+	*lower_right_corner = Eigen::Vector3f(pt_min.x,pt_min.y,pt_min.z);
+	*center = Eigen::Vector3f(mid_pt(0),mid_pt(1),mid_pt(2));
+	//(*lower_right_corner) << min_pt.x << min_pt.y << min_pt.z;
+	//(*center) << mid_pt(0) << mid_pt(1) << mid_pt(2);
+	// for (int i = 0; i < 3; ++i) {
+	// 	(*top_left_corner)(i) = max_pt.data[i];
+	// 	(*lower_right_corner)(i) = min_pt.data[i]; 
+	// 	(*center)(i) = mid_pt(i);
+	// }
+	//mid_pt = (min_pt + max_pt) / 2.0;
+	// Eigen::Vector4f top_left, lower_right;
+	// std::cout << max_pt << std::endl;
+	// std::cout << min_pt << std::endl;
+	// while (right_scale - left_scale > eps_diff) {
+	// 	double scale = (left_scale + right_scale) / 2.0;
+	// 	// Scale the bounding bound accordinly. 	
+	// 	top_left = mid_pt + scale * (max_pt - min_pt) / 2.0;
+	// 	lower_right = mid_pt - scale * (max_pt - min_pt) / 2.0;
+	// 	int num_pts_inside = 0;
+	// 	for (int i = 0; i < cloud->size(); ++i) {
+	// 		if ((cloud->points[i].x < lower_right(0)) || 
+	// 			(cloud->points[i].y < lower_right(1)) ||
+	// 			(cloud->points[i].z < lower_right(2)) ||   
+	// 			(cloud->points[i].x > top_left(0)) || 
+	// 			(cloud->points[i].y > top_left(1)) ||
+	// 			(cloud->points[i].z > top_left(2))) {
+	// 			continue;
+	// 		}
+	// 		num_pts_inside++;
+	// 	}
+	// 	double ratio_inside = (num_pts_inside + 0.0) / cloud->size();
+	// 	std::cout << scale << " ratio inside " << ratio_inside <<  std::endl;
+	// 	if (ratio_inside < cover_ratio) {
+	// 		// shrinks too much.
+	// 		left_scale = scale;
+	// 	} else {
+	// 		right_scale = scale;
+	// 	}
+	// }
+	// for (int i = 0; i < 3; ++i) {
+	// 	(*top_left_corner)(i) = top_left(i);
+	// 	(*lower_right_corner)(i) = lower_right(i); 
+	// }
+}
+   
 
 template <typename T, typename T2>
 //template <typename T2>
