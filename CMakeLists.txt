@@ -51,6 +51,9 @@ target_link_libraries(lib_perception ${PCL_LIBRARIES} ${OpenCV_LIBS})
 add_executable (test_hand_eye hand_eye.cc)
 target_link_libraries(test_hand_eye lib_perception drake::drake ${PCL_LIBRARIES} ${OpenCV_LIBS})
 
+add_executable (robot_cmd_tool robot_cmd_tool.cc)
+target_link_libraries(robot_cmd_tool drake::drake)
+
 #add_library(lib_hand_eye hand_eye.cc perception.cc point_cloud_registration.cc openni_comm.cc)
 #target_link_libraries(lib_hand_eye drake::drake ${PCL_LIBRARIES} ${OpenCV_LIBS})
 

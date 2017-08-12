@@ -109,7 +109,7 @@ void HandEye::Scan(OpenNiComm& camera_interface,
 		perception_proc.ApplyTransformToPointCloud(camera_pose, cloud);
     std::string f_name = "scene" + std::to_string(i) + ".pcd";
     pcl::io::savePCDFileASCII(f_name, *cloud);
-		cin.get();
+		//cin.get();
 
 	  perception_proc.OutlierRemoval(cloud);
 	  //perception_proc.DownSample(cloud, 0.00001);
@@ -263,12 +263,13 @@ int main(int argc, char** argv ) {
   RigidBodyFrame<double> camera_frame("camera", tree.FindBody(drake::jjz::kEEName),
                                       Eigen::Isometry3d::Identity());
   
+  double gaze_dist = 1.0;
   std::vector<Eigen::VectorXd> joint_targets =
       drake::jjz::ComputeCalibrationConfigurations(
-      tree, camera_frame, q0, Eigen::Vector3d(0.65, 0, -0.1),
-      atof(argv[1]), atof(argv[2]), 2, 2);
+      tree, camera_frame, q0, Eigen::Vector3d(0.65, 0, -0.1), 
+      gaze_dist, atof(argv[1]), atof(argv[2]), 2, 2);
 
-  double duration_movement = 2.5;
+  double duration_movement = 2.0;
   //camera_interface.Run();
 
   boost::shared_ptr<pcl::PointCloud<ColoredPointTNormal>> fused_cloud (
