@@ -83,6 +83,93 @@ void HandEye::MoveRobotJointStraightLine(const Eigen::VectorXd& tgt_joint,
 	WaitUntilControlAckDone();
 }
 
+void HandEye::ScanNew(OpenNiComm& camera_interface,
+		PointCloudPerception<ColoredPointT, ColoredPointTNormal> & perception_proc,
+		const std::vector<Eigen::VectorXd>& joint_angles,
+		double duration_per_move,
+		boost::shared_ptr<pcl::PointCloud<ColoredPointTNormal>> fused_cloud) {
+
+	int num_moves = joint_angles.size();
+	std::vector< boost::shared_ptr<pcl::PointCloud<ColoredPointTNormal>> > point_clouds;
+	Eigen::Affine3f first_camera_pose;
+	for (int i = 0; i < num_moves; ++i) {
+		MoveRobotJointStraightLine(joint_angles[i], duration_per_move);
+		std::cout << "Moved to target position" << std::endl;
+		boost::shared_ptr<pcl::PointCloud<ColoredPointT>> cloud(
+				new pcl::PointCloud<ColoredPointT>);
+		//usleep(1*1e+6);
+		camera_interface.GetCurrentPointCloud(cloud);
+		boost::shared_ptr<pcl::PointCloud<pcl::Normal>> normals(
+          new pcl::PointCloud<pcl::Normal>);
+		double normal_est_radius = 0.01;
+		perception_proc.EstimateNormal(cloud, normals, normal_est_radius);
+		boost::shared_ptr<pcl::PointCloud<ColoredPointTNormal>> cloud_with_normal(
+        new pcl::PointCloud<ColoredPointTNormal>);
+		pcl::concatenateFields(*cloud, *normals, *cloud_with_normal);
+		//std::cout << cloud->size() << std::endl;
+		//perception_proc.VisualizePointCloud(cloud);
+		const Eigen::Affine3f camera_pose = GetCameraPoseWrtRobotBase();
+		std::cout << camera_pose.matrix() << std::endl;
+		if (i == 0) {
+			first_camera_pose = camera_pose;
+		}
+		//perception_proc.ApplyTransformToPointCloud(camera_pose, cloud);
+    
+		perception_proc.ApplyTransformToCombinedPointCloud(camera_pose, cloud_with_normal);
+    std::string f_name = "scene" + std::to_string(i) + ".pcd";
+    pcl::io::savePCDFileASCII(f_name, *cloud_with_normal);
+		//cin.get();
+
+	  perception_proc.OutlierRemoval(cloud);
+	  //perception_proc.DownSample(cloud, 0.00001);
+		Eigen::Vector3f min_range;
+
+		min_range << 0.45, -0.4, -0.2;
+		Eigen::Vector3f max_range;
+		max_range << 0.9, 0.4, 0.5;
+		perception_proc.CutWithWorkSpaceConstraints(cloud_with_normal, min_range, max_range);
+
+	  // Get rid of the table.
+	  double thickness = 0.005;
+	  perception_proc.SubtractTable(cloud_with_normal, thickness);
+
+	  // std::vector<int> indices;
+	  // pcl::removeNaNFromPointCloud(*cloud,*cloud, indices);
+		perception_proc.FilterPointsBasedOnScatterness(cloud_with_normal, 0.98);
+		point_clouds.push_back(cloud_with_normal);
+	}
+	std::cout << "to fuse " << point_clouds.size() << " clouds" << std::endl;
+	perception_proc.FuseMultiPointCloudsNew(point_clouds, fused_cloud);
+	std::cout << "fused cloud size " << fused_cloud->size() << std::endl;
+}
+
+void doMainNew(PointCloudPerception<ColoredPointT, ColoredPointTNormal> & perception_proc,
+		int num_moves, boost::shared_ptr<pcl::PointCloud<ColoredPointTNormal>> fused_cloud) {
+	std::vector< boost::shared_ptr<pcl::PointCloud<ColoredPointTNormal>> > point_clouds;
+	for (int i = 0; i < num_moves; ++i) {
+		std::string file_name = "scene" + std::to_string(i) + ".pcd";
+		boost::shared_ptr<pcl::PointCloud<ColoredPointTNormal>> cloud(
+				new pcl::PointCloud<ColoredPointTNormal>);
+		perception_proc.LoadPCDFile(file_name, cloud);
+
+		Eigen::Vector3f min_range;
+		min_range << 0.45,-0.4,-0.2;
+		Eigen::Vector3f max_range;
+		max_range << 0.9,0.4,0.5;
+		perception_proc.CutWithWorkSpaceConstraints(cloud, min_range, max_range);
+
+    // Get rid of the table.
+	  double thickness = 0.005;
+	  perception_proc.SubtractTable(cloud, thickness);
+
+	  std::vector<int> indices;
+	  pcl::removeNaNFromPointCloud(*cloud,*cloud, indices);
+		perception_proc.FilterPointsBasedOnScatterness(cloud, 0.975);
+		point_clouds.push_back(cloud);
+	}
+		perception_proc.FuseMultiPointCloudsNew(point_clouds, fused_cloud);
+}
+
 void HandEye::Scan(OpenNiComm& camera_interface,
 		PointCloudPerception<ColoredPointT, ColoredPointTNormal> & perception_proc,
 		const std::vector<Eigen::VectorXd>& joint_angles,
@@ -106,6 +193,8 @@ void HandEye::Scan(OpenNiComm& camera_interface,
 		if (i == 0) {
 			first_camera_pose = camera_pose;
 		}
+		//perception_proc.ApplyTransformToPointCloud(camera_pose, cloud);
+    
 		perception_proc.ApplyTransformToPointCloud(camera_pose, cloud);
     std::string f_name = "scene" + std::to_string(i) + ".pcd";
     pcl::io::savePCDFileASCII(f_name, *cloud);
@@ -115,15 +204,15 @@ void HandEye::Scan(OpenNiComm& camera_interface,
 	  //perception_proc.DownSample(cloud, 0.00001);
 		Eigen::Vector3f min_range;
 
-		min_range << 0.5, -0.3, -0.2;
+		min_range << 0.45, -0.4, -0.2;
 		Eigen::Vector3f max_range;
-		max_range << 0.85, 0.3, 0.5;
+		max_range << 0.9, 0.4, 0.5;
 		perception_proc.CutWithWorkSpaceConstraints(cloud, min_range, max_range);
 
 	  // Get rid of the table.
 		Eigen::Vector4d coeffs_plane;
 	  pcl::PointIndices::Ptr inliers(new pcl::PointIndices ());
-	  perception_proc.FindPlane(cloud, &coeffs_plane, inliers, 0.005);
+	  perception_proc.FindPlane(cloud, &coeffs_plane, inliers);
 	  pcl::ExtractIndices<ColoredPointT> extract;
 	  extract.setInputCloud (cloud);
     extract.setIndices (inliers);
@@ -133,49 +222,33 @@ void HandEye::Scan(OpenNiComm& camera_interface,
 
 	  std::vector<int> indices;
 	  pcl::removeNaNFromPointCloud(*cloud,*cloud, indices);
-
+		perception_proc.FilterPointsBasedOnScatterness(cloud, 0.99);
 		point_clouds.push_back(cloud);
 	}
 	std::cout << "to fuse " << point_clouds.size() << " clouds" << std::endl;
 	perception_proc.FuseMultiPointClouds(point_clouds, fused_cloud);
 	std::cout << "fused cloud size " << fused_cloud->size() << std::endl;
-	// boost::shared_ptr<pcl::PointCloud<ColoredPointT>> vis_pointcloud;
-	// boost::shared_ptr<pcl::PointCloud<pcl::Normal>> vis_normal;
-	// pcl::copyPointCloud(*fused_cloud, *vis_pointcloud);
-	// pcl::copyPointCloud(*fused_cloud, *vis_normal);
-	//perception_proc.VisualizePointCloudAndNormal(vis_pointcloud, vis_normal);
 
-	//perception_proc.VisualizePointCloud(fused_cloud);
 }
 
 void doMain(PointCloudPerception<ColoredPointT, ColoredPointTNormal> & perception_proc,
-						boost::shared_ptr<pcl::PointCloud<ColoredPointTNormal>> fused_cloud) {
+		int num_moves, boost::shared_ptr<pcl::PointCloud<ColoredPointTNormal>> fused_cloud) {
 	std::vector< boost::shared_ptr<pcl::PointCloud<ColoredPointT>> > point_clouds;
-	for (int i = 0; i < 4; ++i) {
+	for (int i = 0; i < num_moves; ++i) {
 		std::string file_name = "scene" + std::to_string(i) + ".pcd";
 		boost::shared_ptr<pcl::PointCloud<ColoredPointT>> cloud(
 				new pcl::PointCloud<ColoredPointT>);
 		perception_proc.LoadPCDFile(file_name, cloud);
 
 		Eigen::Vector3f min_range;
-		min_range << 0.5,-0.05,-0.2;
 		Eigen::Vector3f max_range;
-		max_range << 0.85,0.25,0.5;
+		min_range << 0.45,-0.4,-0.2;		
+		max_range << 0.9,0.4,0.5;
+		// min_range << 0.55,-0.2,-0.2;		
+		// max_range << 0.65,0.2,0.5;
+
 		perception_proc.CutWithWorkSpaceConstraints(cloud, min_range, max_range);
-		//perception_proc.DownSample(cloud, 0.001);
-		Eigen::Vector3f center = Eigen::Vector3f::Zero();
-	  for (int i = 0; i < cloud->size(); ++i) {
-	  	center(0) += cloud->points[i].x;
-	  	center(1) += cloud->points[i].y;
-	  	center(2) += cloud->points[i].z;
-	  }
-	  center = center / cloud->size();
-	  for (int i = 0; i < cloud->size(); ++i) {
-	  	cloud->points[i].x -= center(0);
-	  	cloud->points[i].y -= center(1);
-	  	cloud->points[i].z -= center(2);
-	  }
-	  std::cout << center << std::endl;
+
 	  Eigen::Vector4d coeffs_plane;
 	  pcl::PointIndices::Ptr inliers(new pcl::PointIndices ());
 	  perception_proc.FindPlane(cloud, &coeffs_plane, inliers, 0.005);
@@ -187,12 +260,9 @@ void doMain(PointCloudPerception<ColoredPointT, ColoredPointTNormal> & perceptio
     extract.filter (*cloud);
 
 
-		min_range << -0.25,-0.3,-0.25;
-		max_range << 0.25, 0.3, 0.25;
-		perception_proc.CutWithWorkSpaceConstraints(cloud, min_range, max_range);
-
 	  std::vector<int> indices;
 	  pcl::removeNaNFromPointCloud(*cloud,*cloud, indices);
+		perception_proc.FilterPointsBasedOnScatterness(cloud, 0.975);
 		point_clouds.push_back(cloud);
 	}
 		perception_proc.FuseMultiPointClouds(point_clouds, fused_cloud);
@@ -254,6 +324,10 @@ int main(int argc, char** argv ) {
   joint_targets.push_back(joint_target4);
 
   */
+  Eigen::VectorXd joint_target_up(7);
+  joint_target_up << -49.9, -35.1 , 4.9, -86.3, 22.6, 113.0, 6.1;
+  joint_target_up = joint_target_up / 180 * M_PI;
+
   Eigen::VectorXd q0 = Eigen::VectorXd::Zero(7);
   q0[1] = -11;
   q0[3] = -69;
@@ -263,23 +337,28 @@ int main(int argc, char** argv ) {
   RigidBodyFrame<double> camera_frame("camera", tree.FindBody(drake::jjz::kEEName),
                                       Eigen::Isometry3d::Identity());
   
-  double gaze_dist = 1.0;
-  std::vector<Eigen::VectorXd> joint_targets =
-      drake::jjz::ComputeCalibrationConfigurations(
-      tree, camera_frame, q0, Eigen::Vector3d(0.65, 0, -0.1), 
-      gaze_dist, atof(argv[1]), atof(argv[2]), 2, 2);
+
 
   double duration_movement = 2.0;
   //camera_interface.Run();
 
   boost::shared_ptr<pcl::PointCloud<ColoredPointTNormal>> fused_cloud (
   		new pcl::PointCloud<ColoredPointTNormal>);
-  OpenNiComm camera_interface;
-  hand_eye_system.Scan(camera_interface, perception_proc,
-   		joint_targets, duration_movement, fused_cloud);
-  camera_interface.Stop();
-
-  //doMain(perception_proc, fused_cloud);
+ 
+  if (argc > 1) {
+	  OpenNiComm camera_interface;
+   	double gaze_dist = 0.9;
+		std::vector<Eigen::VectorXd> joint_targets =
+    	drake::jjz::ComputeCalibrationConfigurations(
+  	  		tree, camera_frame, q0, Eigen::Vector3d(0.65, 0, -0.1), 
+    			gaze_dist, atof(argv[1]), atof(argv[2]), 2, 2);
+  	joint_targets.push_back(joint_target_up);
+	  hand_eye_system.ScanNew(camera_interface, perception_proc,
+	   		joint_targets, duration_movement, fused_cloud);
+	  camera_interface.Stop();
+	} else {
+  	doMainNew(perception_proc, 5, fused_cloud);
+	}
   pcl::io::savePCDFileASCII("test_fused.pcd", *fused_cloud);
 
   // hand_eye_system.MoveRobotJointStraightLine(joint_target1, duration_movement);

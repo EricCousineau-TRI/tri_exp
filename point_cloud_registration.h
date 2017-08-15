@@ -27,7 +27,7 @@ class GeometryAlignmentRepresentation : public
   GeometryAlignmentRepresentation ()
   {
     // Define the number of dimensions
-    nr_dimensions_ = 3;
+    nr_dimensions_ = 4;
   }
 
   // Override the copyToFloatArray method to define our feature vector
@@ -37,35 +37,13 @@ class GeometryAlignmentRepresentation : public
     out[0] = p.x;
     out[1] = p.y;
     out[2] = p.z;
-    // out[3] = p.curvature;
+    out[3] = p.curvature;
     // out[4] = p.normal_x;
    	// out[5] = p.normal_x;
     // out[6] = p.normal_x;
      
   }
 };
-
-// // Define a new point representation for combined xyz,normal alignment.
-// class XYZAlignmentRepresentation : public 
-//   pcl::PointRepresentation <pcl::PointXYZNormal> {
-//   using pcl::PointRepresentation<pcl::PointXYZNormal>::nr_dimensions_;
-//  public:
-//   XYZAlignmentRepresentation ()
-//   {
-//     // Define the number of dimensions
-//     nr_dimensions_ = 4;
-//   }
-
-//   // Override the copyToFloatArray method to define our feature vector
-//   virtual void copyToFloatArray (const pcl::PointXYZRGBNormal &p, float * out) const
-//   {
-//     // < x, y, z, curvature >
-//     out[0] = p.x;
-//     out[1] = p.y;
-//     out[2] = p.z;
-//     out[3] = p.curvature;
-//   }
-// };
 
 // This class implements methods for registration between point cloud pairs. 
 class PointCloudPairRegistration {
@@ -87,7 +65,7 @@ class PointCloudPairRegistration {
   double least_error = 1e+9;
   int ct_round = 0;
   double range_sample_angle =  0 * M_PI / 24.0;
-  Eigen::Matrix4f targetToSource;
+  Eigen::Matrix4f targetToSource = Eigen::Matrix4f::Identity();;
   srand(-1);
   boost::shared_ptr<pcl::PointCloud<T>> points_with_normals_src(new pcl::PointCloud<T>);
   while (ct_round < round_seeds) {
@@ -103,11 +81,7 @@ class PointCloudPairRegistration {
 	  Ti.topLeftCorner(3,3) = mat;
 	  //Ti(2,3) = -0.02;
 	  std::cout << "Initial transformation" << std::endl;
-	  // Eigen::Vector4f centroid_src, centroid_tgt;
-	  // pcl::compute3DCentroid(src, &centroid_src);
-	  // pcl::compute3DCentroid(tgt, &centroid_tgt);
-	  // std::cout << centroid_src << std::endl;
-	  // std::cout << centroid_tgt << std::endl;
+
 	  std::cout << Ti << std::endl;
 	  targetToSource = Ti.inverse();
 	  
@@ -115,8 +89,9 @@ class PointCloudPairRegistration {
 
 	  GeometryAlignmentRepresentation<T> point_representation;
 	  // Weight the 'curvature' dimension so that it is balanced against x, y, and z
-	  float alpha[3] = {1.0, 1.0, 1.0};
-	  //float alpha[7] = {1.0, 1.0, 1.0, .001, .001, .001, .001};
+	  //float alpha[3] = {1.0, 1.0, 1.0};
+	  //float alpha[7] = {1.0, 1.0, 1.0, .5, .5, .5, .5};
+	  float alpha[4] = {1.0, 1.0, 1.0, .05};
 	  point_representation.setRescaleValues (alpha);
 
 	  pcl::IterativeClosestPoint<T, T> reg;
@@ -136,7 +111,7 @@ class PointCloudPairRegistration {
 	  reg.setInputSource (src);
 	  reg.setInputTarget (tgt);
 
-	 	int num_iters = 20;
+	 	int num_iters = 30;
 	  reg.setMaximumIterations (num_iters);
 	  
 	  pcl::PointCloud<T> tmp;
@@ -145,7 +120,7 @@ class PointCloudPairRegistration {
 	  Ti = reg.getFinalTransformation () * Ti;
 	  //std::cout << Ti << std::endl;
 
-	  int num_extra_iters = 20;
+	  int num_extra_iters = 10;
 	  double final_correspondence_dist = 0.001;
 	  double decr_dist = 
 	  	(init_correspondence_dist - final_correspondence_dist)  / num_extra_iters;
@@ -181,15 +156,10 @@ class PointCloudPairRegistration {
 	  }
 	    ct_round++; 
  	}
- 		// std::cout << "Best among different ICs" << std::endl;
-	// std::cout << targetToSource << std::endl;
-	// std::cout << least_error << std::endl;
-  // Transform target onto source frame
+
  	pcl::transformPointCloud (*tgt, *output, targetToSource);
   //add the source to the transformed target
   *output += *src;
-  // *output += *points_with_normals_src;
-  // *output += *tgt;
   *final_transform = targetToSource;  	
  }
 };

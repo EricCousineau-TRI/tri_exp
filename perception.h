@@ -65,6 +65,9 @@ class PointCloudPerception {
   	void LoadPCDFile(std::string file_name,
   		boost::shared_ptr<pcl::PointCloud<T>> cloud);
 
+    void LoadPCDFile(std::string file_name,
+      boost::shared_ptr<pcl::PointCloud<T2>> cloud);
+
 
     void DownSample(boost::shared_ptr<pcl::PointCloud<T>> cloud,
                     double leaf_size = 0.002);
@@ -72,11 +75,24 @@ class PointCloudPerception {
     void CutWithWorkSpaceConstraints(boost::shared_ptr<pcl::PointCloud<T>> cloud,
         const Eigen::Vector3f & min_range, const Eigen::Vector3f& max_range);
 
+    void CutWithWorkSpaceConstraints(boost::shared_ptr<pcl::PointCloud<T2>> cloud,
+        const Eigen::Vector3f & min_range, const Eigen::Vector3f& max_range);
+
     void FilterPointsWithEmptyNormals(boost::shared_ptr<pcl::PointCloud<T2>> cloud);
 
-    void SubtractTable(boost::shared_ptr<pcl::PointCloud<T>> cloud);
+    void SubtractTable(boost::shared_ptr<pcl::PointCloud<T>> cloud, double thickness = 0.01);
+    void SubtractTable(boost::shared_ptr<pcl::PointCloud<T2>> cloud, double thickness = 0.01);
 
+    void SelectNearCentroidPoints(const boost::shared_ptr<pcl::PointCloud<T2>> cloud, 
+        std::vector<int>* indices, double cover_ratio);
 
+    void FilterPointsBasedOnScatterness(boost::shared_ptr<pcl::PointCloud<T2>> cloud, 
+        double cover_ratio);
+    void SelectNearCentroidPoints(const boost::shared_ptr<pcl::PointCloud<T>> cloud, 
+        std::vector<int>* indices, double cover_ratio);
+
+    void FilterPointsBasedOnScatterness(boost::shared_ptr<pcl::PointCloud<T>> cloud, 
+        double cover_ratio);
     // Find a bounding box to the current point cloud with binary search.
     // The reason for cover_ratio not equals to 1 is to be robust to outliers.
     // Top left corner is (xmax, ymax, zmax), lower right corner is (xmin, ymin, zmin).
@@ -110,17 +126,25 @@ class PointCloudPerception {
   	void OutlierRemoval(boost::shared_ptr<pcl::PointCloud<T>> cloud,
   		int num_neighbor = 50, double std_dev_threshold = 1.0);
 
+    void OutlierRemoval(boost::shared_ptr<pcl::PointCloud<T2>> cloud,
+      int num_neighbor = 50, double std_dev_threshold = 1.0);
+
   	// Get the plane coeffcients. ax + by + cz + d = 0, returned in vector4d.
     void FindPlane(const boost::shared_ptr<pcl::PointCloud<T>> cloud,
   		Eigen::Vector4d* coeffs_plane,  pcl::PointIndices::Ptr inliers,
-  		double dist_threshold = 0.01);
+  		double dist_threshold = 0.02);
+
+    // Get the plane coeffcients. ax + by + cz + d = 0, returned in vector4d.
+    void FindPlane(const boost::shared_ptr<pcl::PointCloud<T2>> cloud,
+      Eigen::Vector4d* coeffs_plane,  pcl::PointIndices::Ptr inliers,
+      double dist_threshold = 0.02);
 
   	// Points normals estimation. Assume the camera view is at world origin.
     // If the points are organized, we use integral image for speeding up.
     // Otherwise we use plain covariance matrix estimation with omp multi threading.
     void EstimateNormal(const boost::shared_ptr<pcl::PointCloud<T>> cloud,
       boost::shared_ptr<pcl::PointCloud<pcl::Normal>> normals,
-      double radius = 0.01);
+      double radius = 0.02);
 
     // Projection point cloud onto a camera pose and generate opencv rgb image.
     // Note that the point cloud needs to be transformed to camera frame coordinate
@@ -129,7 +153,47 @@ class PointCloudPerception {
       const boost::shared_ptr<pcl::PointCloud<ColoredPointT>> cloud,
       const Camera camera, int stride = 4);
 
-  	// Fuse a pair of point clouds by aligning normal and curvature features.
+    void FusePointCloudPairNew(
+      const boost::shared_ptr<pcl::PointCloud<T2>> cloud_with_normal_src,
+      const boost::shared_ptr<pcl::PointCloud<T2>> cloud_with_normal_tgt,
+      boost::shared_ptr<pcl::PointCloud<T2>> combined,
+      Eigen::Matrix4f* transform) {
+      
+      FilterPointsWithEmptyNormals(cloud_with_normal_src);
+      FilterPointsWithEmptyNormals(cloud_with_normal_tgt);
+
+      PointCloudPairRegistration reg;
+      reg.RegisterPointCloudPair<T2>(cloud_with_normal_src, cloud_with_normal_tgt,
+                                    combined, transform);
+
+    }
+
+     void FuseMultiPointCloudsNew(
+        const std::vector< boost::shared_ptr<pcl::PointCloud<T2>> > point_clouds,
+        boost::shared_ptr<pcl::PointCloud<T2>> combined_cloud) {
+
+      Eigen::Affine3f global_tf_affine = Eigen::Affine3f::Identity();
+      //Eigen::Matrix4f global_transform = Eigen::Matrix4f::Identity();
+      for (unsigned i = 0; i < point_clouds.size() - 1; ++i) {
+        //if (i == 1) continue;
+        boost::shared_ptr<pcl::PointCloud<T2>> tmp_combined_cloud(new pcl::PointCloud<T2>);
+        Eigen::Matrix4f relative_transform;
+        //std::cout << point_clouds[i-1]->size() << std::endl;
+        FusePointCloudPairNew(point_clouds[point_clouds.size() - 1], point_clouds[i],  
+            tmp_combined_cloud, &relative_transform);
+        // global_tf_affine.matrix() = global_tf_affine.matrix() * relative_transform;
+        // ApplyTransformToCombinedPointCloud(global_tf_affine, tmp_combined_cloud);
+        // *combined_cloud += *tmp_combined_cloud;
+        std::string f_name = "test" + std::to_string(i) + ".pcd";
+        pcl::io::savePCDFileASCII(f_name, *tmp_combined_cloud);
+        *combined_cloud += *tmp_combined_cloud;
+      }
+    }
+
+
+
+
+    // Fuse a pair of point clouds by aligning normal and curvature features.
     // A transformation will be applied to the second point cloud (tgt) to the
     // first point cloud (src).
     // Note that the two point cloud needs to be roughly aligned already with
@@ -163,50 +227,14 @@ class PointCloudPerception {
       pcl::concatenateFields(*src, *normals_src, *cloud_with_normal_src);
       pcl::concatenateFields(*tgt, *normals_tgt, *cloud_with_normal_tgt);
       
-
-      // for (int t = 0; t < 1000; ++t) {
-      //   int i = rand() % src->size();
-      //   std::cout << "Cloud point" << i << std::endl; 
-      //   std::cout << src->points[i].x << std::endl;
-      //   std::cout << tgt->points[i].x << std::endl;
-      //   std::cout << normals_src->points[i].curvature << std::endl;
-      //   std::cout << normals_tgt->points[i].curvature << std::endl;
-      //   std::cout << cloud_with_normal_src->points[i].curvature << std::endl;
-      //   std::cout << cloud_with_normal_tgt->points[i].curvature << std::endl;
-      // }
+      FilterPointsWithEmptyNormals(cloud_with_normal_src);
+      FilterPointsWithEmptyNormals(cloud_with_normal_tgt);
 
       PointCloudPairRegistration reg;
       reg.RegisterPointCloudPair<T2>(cloud_with_normal_src, cloud_with_normal_tgt,
                                     combined, transform);
     }
 
-    // //template <typename T2>
-    // void ConcatPointAndNormal(const boost::shared_ptr<pcl::PointCloud<T>> cloud, 
-    //   const boost::shared_ptr<pcl::PointCloud<pcl::Normal>> normals,
-    //   boost::shared_ptr<pcl::PointCloud<T2>> points_normals) {
-
-    //   assert(cloud->size() == normals->size());
-    //   points_normals->reserve(cloud->size());
-    //   for (int i = 0; i < cloud->size(); ++i) {
-    //     T2 pt;
-    //     pt.x = cloud->points[i].x;
-    //     pt.y = cloud->points[i].y;
-    //     pt.z = cloud->points[i].z;
-    //     bool has_color = pcl::traits::has_field<T, pcl::fields::rgba>::value; 
-    //     if (has_color) {
-    //       pt.rgb = cloud->points[i].rgb;
-    //       // pt.r = points.points[i].r;
-    //       // pt.g = points.points[i].g;
-    //       // pt.b = points.points[i].b;
-    //       // pt.a = points.points[i].a;
-    //     }
-    //     pt.normal_x = normals->points[i].normal_x;  
-    //     pt.normal_y = normals->points[i].normal_y;
-    //     pt.normal_z = normals->points[i].normal_z;
-    //     pt.curvature = normals->points[i].curvature;
-    //     points_normals->points[i]= pt;
-    //   }
-    // }
 
     // Fuse multiple point clouds seqentially. Every consecutive pairs are fused
     // and added to the combined one.
@@ -217,12 +245,12 @@ class PointCloudPerception {
 
       Eigen::Affine3f global_tf_affine = Eigen::Affine3f::Identity();
       //Eigen::Matrix4f global_transform = Eigen::Matrix4f::Identity();
-      for (unsigned i = 0; i < point_clouds.size(); ++i) {
-        if (i == 1) continue;
+      for (unsigned i = 0; i < point_clouds.size() - 1; ++i) {
+        //if (i == 1) continue;
         boost::shared_ptr<pcl::PointCloud<T2>> tmp_combined_cloud(new pcl::PointCloud<T2>);
         Eigen::Matrix4f relative_transform;
         //std::cout << point_clouds[i-1]->size() << std::endl;
-        FusePointCloudPair(point_clouds[1], point_clouds[i],  
+        FusePointCloudPair(point_clouds[point_clouds.size() - 1], point_clouds[i],  
             tmp_combined_cloud, &relative_transform);
         // global_tf_affine.matrix() = global_tf_affine.matrix() * relative_transform;
         // ApplyTransformToCombinedPointCloud(global_tf_affine, tmp_combined_cloud);

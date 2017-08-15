@@ -51,6 +51,11 @@ class HandEye {
 			double duration_per_move, 
 			boost::shared_ptr<pcl::PointCloud<ColoredPointTNormal>> fused_cloud);	
 
+	void ScanNew(OpenNiComm& camera_interface,
+			PointCloudPerception<ColoredPointT, ColoredPointTNormal> & perception_proc,
+			const std::vector<Eigen::VectorXd>& joint_angles,
+			double duration_per_move,
+			boost::shared_ptr<pcl::PointCloud<ColoredPointTNormal>> fused_cloud); 
 	// Grab current point cloud from the openni camera (xtion pro) and save a
 	// copy for the class.
 	//void GrabCurrentPointCloud();
@@ -62,7 +67,7 @@ class HandEye {
  	void WaitUntilControlAckDone();
 
  	drake::jjz::JjzController robot_controller_;
- 	//OpenNiComm camera_interface_;
+
  	drake::jjz::IiwaState robot_state_;
  	// Camera frame with respect to hand frame.
  	Eigen::Isometry3d tf_eye_wrt_hand_;

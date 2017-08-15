@@ -13,6 +13,15 @@ void PointCloudPerception<T, T2>::LoadPCDFile(std::string file_name,
   std::cout << "remove Nan size" << indices.size() << std::endl;
 }
 
+template <typename T, typename T2>
+void PointCloudPerception<T, T2>::LoadPCDFile(std::string file_name,
+	boost::shared_ptr<pcl::PointCloud<T2>> cloud) {
+  pcl::PCDReader reader;
+  reader.read<T2>(file_name, *cloud);
+  std::vector<int> indices;
+  pcl::removeNaNFromPointCloud(*cloud,*cloud, indices);
+  std::cout << "remove Nan size" << indices.size() << std::endl;
+}
 
 template <typename T, typename T2>
 void PointCloudPerception<T, T2>::DownSample(boost::shared_ptr<pcl::PointCloud<T>> cloud,
@@ -34,10 +43,14 @@ void PointCloudPerception<T, T2>::FilterPointsWithEmptyNormals(
 	for (int i = 0; i < num_points; ++i) {
 		bool has_normal = true;
 		for (int j = 0; j < 3; ++j) {
-			if (!((cloud->points[i].normal[j] >= -1 && cloud->points[i].normal[j] <= 1))) {
+			//std::cout << cloud->points[i].normal[j] << ",";
+			// Elastic fusion can sometimes return normals having compoenent slightly
+			// larger than 1.0.
+			if (!((cloud->points[i].normal[j] >= - 2 && cloud->points[i].normal[j] <= 2))) {
 				has_normal = false;
 			}
 		}
+		//std::cout << std::endl;
 		if (has_normal) {
 			inliers->indices.push_back(i);
 		}
@@ -54,6 +67,25 @@ void PointCloudPerception<T, T2>::FilterPointsWithEmptyNormals(
 template <typename T, typename T2>
 void PointCloudPerception<T, T2>::CutWithWorkSpaceConstraints(
 		boost::shared_ptr<pcl::PointCloud<T>> cloud, 
+		const Eigen::Vector3f & min_range, const Eigen::Vector3f& max_range) {
+	int counter = 0;
+	int num_original_size = cloud->size();
+	std::cout << "Original size before ws cut " << num_original_size << std::endl;
+	for (int i = 0; i < num_original_size; ++i) {
+		if ((cloud->points[i].x >= min_range(0)) && (cloud->points[i].x <= max_range(0))
+			&& (cloud->points[i].y >= min_range(1)) && (cloud->points[i].y <= max_range(1))
+		  && (cloud->points[i].z >= min_range(2)) && (cloud->points[i].z <= max_range(2))) {
+			cloud->points[counter] = cloud->points[i];
+			counter++;
+		}
+	}
+	cloud->resize(counter);
+	std::cout << "After cut " << cloud->size() << std::endl;
+}
+
+template <typename T, typename T2>
+void PointCloudPerception<T, T2>::CutWithWorkSpaceConstraints(
+		boost::shared_ptr<pcl::PointCloud<T2>> cloud, 
 		const Eigen::Vector3f & min_range, const Eigen::Vector3f& max_range) {
 	int counter = 0;
 	int num_original_size = cloud->size();
@@ -115,9 +147,11 @@ void PointCloudPerception<T, T2>::SeparatePointsAndNormals(
 
 template <typename T, typename T2>
 void PointCloudPerception<T, T2>::SubtractTable(
-		boost::shared_ptr<pcl::PointCloud<T>> cloud) {
+		boost::shared_ptr<pcl::PointCloud<T>> cloud, double table_thickness) {
 	  // Get rid of the table.
   pcl::PointIndices::Ptr inliers(new pcl::PointIndices ());
+  Eigen::Vector4d coeffs_plane;
+  FindPlane(cloud, &coeffs_plane, inliers, table_thickness);
   pcl::ExtractIndices<T> extract;
   extract.setInputCloud (cloud);
   extract.setIndices (inliers);
@@ -125,28 +159,43 @@ void PointCloudPerception<T, T2>::SubtractTable(
   extract.filter (*cloud);
 }
 
-
+template <typename T, typename T2>
+void PointCloudPerception<T, T2>::SubtractTable(
+		boost::shared_ptr<pcl::PointCloud<T2>> cloud, double table_thickness) {
+	  // Get rid of the table.
+  pcl::PointIndices::Ptr inliers(new pcl::PointIndices ());
+  Eigen::Vector4d coeffs_plane;
+  FindPlane(cloud, &coeffs_plane, inliers, table_thickness);
+  pcl::ExtractIndices<T2> extract;
+  extract.setInputCloud (cloud);
+  extract.setIndices (inliers);
+  extract.setNegative (true);
+  extract.filter (*cloud);
+}
 
 template <typename T, typename T2>
-void PointCloudPerception<T, T2>::FindBoundingBox(
-		const boost::shared_ptr<pcl::PointCloud<T>> cloud,
-		Eigen::Vector3f* center, Eigen::Vector3f* top_left_corner, 
-		Eigen::Vector3f* lower_right_corner, double cover_ratio) {
+void PointCloudPerception<T, T2>::FilterPointsBasedOnScatterness(
+		boost::shared_ptr<pcl::PointCloud<T2>> cloud, double cover_ratio) {
+  pcl::PointIndices::Ptr inliers(new pcl::PointIndices ());
+	//std::vector<int> indices_near;
+	SelectNearCentroidPoints(cloud, &(inliers->indices), cover_ratio);
+	pcl::ExtractIndices<T2> extract;
+  extract.setInputCloud (cloud);
+  //inliers->indices = indices_near;
+  extract.setIndices (inliers);
+  extract.setNegative (false);
+  extract.filter (*cloud);	
+}
+
+template <typename T, typename T2>
+void PointCloudPerception<T, T2>::SelectNearCentroidPoints(
+		const boost::shared_ptr<pcl::PointCloud<T2>> cloud, 
+		std::vector<int>* indices, double cover_ratio) {
+
 	int num_pts = cloud->size();
-	double left_scale = 0;
-	double right_scale = 1.0;
-	double eps_diff = 1e-4;
-	// Eigen uses 4f for its interface.
-	Eigen::Vector4f min_pt, max_pt;
 	Eigen::Vector4f mid_pt;
 	pcl::compute3DCentroid(*cloud, mid_pt);
-  // for (int i = 0; i < cloud->size(); ++i) {
-  // 	mid_pt(0) += cloud->points[i].x;
-  // 	mid_pt(1) += cloud->points[i].y;
-  // 	mid_pt(2) += cloud->points[i].z;
-  // }
-  
-  // mid_pt = mid_pt / cloud->size();
+
 	// Compute average distance to the center.
 	double avg_dist = 0;
 	std::vector<double> all_dists(num_pts);
@@ -167,13 +216,80 @@ void PointCloudPerception<T, T2>::FindBoundingBox(
 	sort(all_dists.begin(), all_dists.end());
 	int index_threshold = std::min(int(floor(num_pts * cover_ratio)), num_pts - 1);
 	double dist_threshold = all_dists[index_threshold];
-	std::vector<int> remaining_index;
-	mid_pt = Eigen::Vector4f::Zero();
+	indices->clear();
 	for (int i = 0; i < num_pts; ++i) {
 		if (all_dists_cp[i] < dist_threshold) {
-			remaining_index.push_back(i);
+			indices->push_back(i);
 		}
 	}
+}
+
+template <typename T, typename T2>
+void PointCloudPerception<T, T2>::FilterPointsBasedOnScatterness(
+		boost::shared_ptr<pcl::PointCloud<T>> cloud, double cover_ratio) {
+  pcl::PointIndices::Ptr inliers(new pcl::PointIndices ());
+	//std::vector<int> indices_near;
+	SelectNearCentroidPoints(cloud, &(inliers->indices), cover_ratio);
+	pcl::ExtractIndices<T> extract;
+  extract.setInputCloud (cloud);
+  //inliers->indices = indices_near;
+  extract.setIndices (inliers);
+  extract.setNegative (false);
+  extract.filter (*cloud);	
+}
+
+template <typename T, typename T2>
+void PointCloudPerception<T, T2>::SelectNearCentroidPoints(
+		const boost::shared_ptr<pcl::PointCloud<T>> cloud, 
+		std::vector<int>* indices, double cover_ratio) {
+
+	int num_pts = cloud->size();
+	Eigen::Vector4f mid_pt;
+	pcl::compute3DCentroid(*cloud, mid_pt);
+
+	// Compute average distance to the center.
+	double avg_dist = 0;
+	std::vector<double> all_dists(num_pts);
+	std::vector<double> all_dists_cp(num_pts);
+	for (int i = 0; i < cloud->size(); ++i) {
+		Eigen::Vector4f pt;
+		pt[0] = float(cloud->points[i].x);
+		pt[1] = float(cloud->points[i].y);
+		pt[2] = float(cloud->points[i].z);
+		pt[3] = 0; 
+		all_dists[i] = (pt - mid_pt).norm();
+		all_dists_cp[i] = (pt - mid_pt).norm();
+		avg_dist = avg_dist + all_dists[i] ;
+	}
+	avg_dist = avg_dist / cloud->size();
+	// Sort the distances and only keep the first 95% for computation of initial
+	// bounding box. Update the middle point.
+	sort(all_dists.begin(), all_dists.end());
+	int index_threshold = std::min(int(floor(num_pts * cover_ratio)), num_pts - 1);
+	double dist_threshold = all_dists[index_threshold];
+	indices->clear();
+	for (int i = 0; i < num_pts; ++i) {
+		if (all_dists_cp[i] < dist_threshold) {
+			indices->push_back(i);
+		}
+	}
+}
+
+template <typename T, typename T2>
+void PointCloudPerception<T, T2>::FindBoundingBox(
+		const boost::shared_ptr<pcl::PointCloud<T>> cloud,
+		Eigen::Vector3f* center, Eigen::Vector3f* top_left_corner, 
+		Eigen::Vector3f* lower_right_corner, double cover_ratio) {
+	int num_pts = cloud->size();
+	double left_scale = 0;
+	double right_scale = 1.0;
+	double eps_diff = 1e-4;
+	// Eigen uses 4f for its interface.
+	Eigen::Vector4f min_pt, max_pt;
+	Eigen::Vector4f mid_pt;
+	std::vector<int> remaining_index;
+	SelectNearCentroidPoints(cloud, &remaining_index, cover_ratio);
+
 	pcl::compute3DCentroid(*cloud, remaining_index, mid_pt);
 	pcl::PCA<T> pca;
 	pca.setInputCloud(cloud);
@@ -205,62 +321,40 @@ void PointCloudPerception<T, T2>::FindBoundingBox(
 	*top_left_corner = Eigen::Vector3f(pt_max.x,pt_max.y,pt_max.z);
 	*lower_right_corner = Eigen::Vector3f(pt_min.x,pt_min.y,pt_min.z);
 	*center = Eigen::Vector3f(mid_pt(0),mid_pt(1),mid_pt(2));
-	//(*lower_right_corner) << min_pt.x << min_pt.y << min_pt.z;
-	//(*center) << mid_pt(0) << mid_pt(1) << mid_pt(2);
-	// for (int i = 0; i < 3; ++i) {
-	// 	(*top_left_corner)(i) = max_pt.data[i];
-	// 	(*lower_right_corner)(i) = min_pt.data[i]; 
-	// 	(*center)(i) = mid_pt(i);
-	// }
-	//mid_pt = (min_pt + max_pt) / 2.0;
-	// Eigen::Vector4f top_left, lower_right;
-	// std::cout << max_pt << std::endl;
-	// std::cout << min_pt << std::endl;
-	// while (right_scale - left_scale > eps_diff) {
-	// 	double scale = (left_scale + right_scale) / 2.0;
-	// 	// Scale the bounding bound accordinly. 	
-	// 	top_left = mid_pt + scale * (max_pt - min_pt) / 2.0;
-	// 	lower_right = mid_pt - scale * (max_pt - min_pt) / 2.0;
-	// 	int num_pts_inside = 0;
-	// 	for (int i = 0; i < cloud->size(); ++i) {
-	// 		if ((cloud->points[i].x < lower_right(0)) || 
-	// 			(cloud->points[i].y < lower_right(1)) ||
-	// 			(cloud->points[i].z < lower_right(2)) ||   
-	// 			(cloud->points[i].x > top_left(0)) || 
-	// 			(cloud->points[i].y > top_left(1)) ||
-	// 			(cloud->points[i].z > top_left(2))) {
-	// 			continue;
-	// 		}
-	// 		num_pts_inside++;
-	// 	}
-	// 	double ratio_inside = (num_pts_inside + 0.0) / cloud->size();
-	// 	std::cout << scale << " ratio inside " << ratio_inside <<  std::endl;
-	// 	if (ratio_inside < cover_ratio) {
-	// 		// shrinks too much.
-	// 		left_scale = scale;
-	// 	} else {
-	// 		right_scale = scale;
-	// 	}
-	// }
-	// for (int i = 0; i < 3; ++i) {
-	// 	(*top_left_corner)(i) = top_left(i);
-	// 	(*lower_right_corner)(i) = lower_right(i); 
-	// }
+
 }
    
 
 template <typename T, typename T2>
-//template <typename T2>
 void PointCloudPerception<T, T2>::ApplyTransformToPointCloud(Eigen::Affine3f tf,
 		boost::shared_ptr<pcl::PointCloud<T>> cloud) {
 	pcl::transformPointCloud(*cloud, *cloud, tf);
 }
 
 template <typename T, typename T2>
-//template <typename T2>
 void PointCloudPerception<T, T2>::ApplyTransformToCombinedPointCloud(Eigen::Affine3f tf,
-		boost::shared_ptr<pcl::PointCloud<T2>> cloud) {
+		boost::shared_ptr<pcl::PointCloud<T2>> cloud_and_normal) {
+	boost::shared_ptr<pcl::PointCloud<T>> cloud(
+		new pcl::PointCloud<T>);
+
+	boost::shared_ptr<pcl::PointCloud<pcl::Normal>> normals(
+		new pcl::PointCloud<pcl::Normal>);
+
+	SeparatePointsAndNormals(cloud_and_normal, cloud, normals);
 	pcl::transformPointCloud(*cloud, *cloud, tf);
+	Eigen::Affine3f tf_rot = tf;
+	tf_rot.translation() = Eigen::Vector3f::Zero();
+	//pcl::transformPointCloud(*normals, *normals, tf_rotation_only);
+	for (int i = 0; i < normals->size(); ++i) {
+  	Eigen::Vector3f normal_i((*normals)[i].normal_x, (*normals)[i].normal_y, 
+  		(*normals)[i].normal_z);
+  	normal_i = tf_rot * normal_i;
+  	(*normals)[i].normal_x = normal_i(0);
+  	(*normals)[i].normal_y = normal_i(1);
+  	(*normals)[i].normal_z = normal_i(2);
+  }
+  cloud_and_normal->clear();
+	pcl::concatenateFields(*cloud, *normals, *cloud_and_normal);
 }
 
 
@@ -269,6 +363,17 @@ void PointCloudPerception<T, T2>::OutlierRemoval(
 		boost::shared_ptr<pcl::PointCloud<T>> cloud, int num_neighbor,
 	double std_dev_threshold) {
   pcl::StatisticalOutlierRemoval<T> sor;
+  sor.setInputCloud (cloud);
+  sor.setMeanK (num_neighbor);
+  sor.setStddevMulThresh (std_dev_threshold);
+  sor.filter (*cloud);
+}
+
+template <typename T, typename T2>
+void PointCloudPerception<T, T2>::OutlierRemoval(
+		boost::shared_ptr<pcl::PointCloud<T2>> cloud, int num_neighbor,
+	double std_dev_threshold) {
+  pcl::StatisticalOutlierRemoval<T2> sor;
   sor.setInputCloud (cloud);
   sor.setMeanK (num_neighbor);
   sor.setStddevMulThresh (std_dev_threshold);
@@ -285,6 +390,33 @@ void PointCloudPerception<T, T2>::FindPlane(
 	//pcl::PointIndices::Ptr inliers (new pcl::PointIndices);
 	// Create the segmentation object
 	pcl::SACSegmentation<T> seg;
+	// Optional
+	seg.setOptimizeCoefficients (true);
+	// Mandatory
+	seg.setModelType(pcl::SACMODEL_PLANE);
+	seg.setMethodType(pcl::SAC_RANSAC);
+	seg.setDistanceThreshold(dist_threshold);
+
+	seg.setInputCloud(cloud);
+	seg.segment(*inliers, *coefficients);
+
+	//Eigen::Vector4d plane_coefficients;
+	for (int i = 0; i < coefficients->values.size(); ++i) {
+		(*plane_coefficients)(i) = coefficients->values[i];
+	}
+}
+
+
+template <typename T, typename T2>
+void PointCloudPerception<T, T2>::FindPlane(
+		const boost::shared_ptr<pcl::PointCloud<T2>> cloud,
+  	Eigen::Vector4d* plane_coefficients, pcl::PointIndices::Ptr inliers,
+  	double dist_threshold) {
+
+  pcl::ModelCoefficients::Ptr coefficients (new pcl::ModelCoefficients);
+	//pcl::PointIndices::Ptr inliers (new pcl::PointIndices);
+	// Create the segmentation object
+	pcl::SACSegmentation<T2> seg;
 	// Optional
 	seg.setOptimizeCoefficients (true);
 	// Mandatory
@@ -331,9 +463,20 @@ void PointCloudPerception<T, T2>::EstimateNormal(
 	//}
 	// Compute the right direction of normals assuming camera is at the world
 	// origin and is viewing towards the positive z direction.
-	// for (int i = 0; i < cloud.size(); ++i) {
-	// 	flipNormalTowardsViewpoint(const PointT &point, 0, 0, 0, Eigen::Vector4f &normal);
-	// }
+	for (int i = 0; i < cloud->size(); ++i) {
+		double x,y,z,nx,ny,nz;
+		x = cloud->points[i].x;
+		y = cloud->points[i].y;
+		z = cloud->points[i].z;
+		nx = normals->points[i].normal_x;
+		ny = normals->points[i].normal_y;
+		nz = normals->points[i].normal_z;
+		if (x * nx + y * ny + z * nz > 0) {
+			normals->points[i].normal_x = -nx;
+			normals->points[i].normal_y = -ny;
+			normals->points[i].normal_z = -nz;
+		}
+	}
 }
 
 // template <typename T>

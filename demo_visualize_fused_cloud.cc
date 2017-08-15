@@ -22,14 +22,29 @@ int main(int argc, char** argv) {
 	pcl::PCDReader reader;
 	reader.read<ColoredPointTNormal>(test_file, *cloud_and_normal);
 
-  	pcl::StatisticalOutlierRemoval<ColoredPointTNormal> sor;
-	sor.setInputCloud (cloud_and_normal);
-	int num_neighbor = 50;
-	double std_dev_threshold = 2;
-	sor.setMeanK (num_neighbor);
-  	sor.setStddevMulThresh (std_dev_threshold);
-  	sor.filter (*cloud_and_normal);
+	// tmp tf for MoveJ 53.741  33.0757 -6.67238 -38.0249 -29.5578  118.952 -2.52224 5
+	Eigen::Affine3f tf_tmp;
+	tf_tmp.matrix() << -0.799218 , 0.516049,  0.272282,  0.463091,
+ 			  0.352113,  0.817477, -0.444457,  0.449454,
+			 -0.487101, -0.255781, -0.853417,  0.658012,
+        		0,         0,         0,         1;
+    test.ApplyTransformToCombinedPointCloud(tf_tmp, cloud_and_normal);
 
+	pcl::PointIndices::Ptr inliers(new pcl::PointIndices);
+	Eigen::Vector4d coeffs_plane;
+	test.FindPlane(cloud_and_normal, &coeffs_plane, inliers, 0.005);
+	std::cout << coeffs_plane << std::endl;
+	Eigen::Vector3f min_range;
+	min_range << 0.45, -0.2, -0.2;
+	Eigen::Vector3f max_range;
+	max_range << 0.9, 0.2, 0.5;
+	test.CutWithWorkSpaceConstraints(cloud_and_normal, min_range, max_range);
+
+  	// Get rid of the table.
+  	double thickness = 0.005;
+  	test.SubtractTable(cloud_and_normal, thickness);
+
+	
 	test.FilterPointsWithEmptyNormals(cloud_and_normal);
 	
 	test.SeparatePointsAndNormals(cloud_and_normal, cloud, normals);
@@ -44,21 +59,21 @@ int main(int argc, char** argv) {
 	
 	test.VisualizePointCloudAndNormal(cloud, normals);
 	
-	// std::string normal_csv_file = "normals.csv";
+	std::string normal_csv_file = "normals.csv";
 
-	// std::ofstream csv_output(normal_csv_file);
-	// for (int d = 0; d < 3; ++d) {
-	// 	for (int i = 0; i < normals->size(); ++i) {
-	// 		csv_output << normals->points[i].normal[d];
-	// 		if (i == normals->size() - 1) {
-	// 			csv_output << std::endl;
-	// 		} else {
-	// 			csv_output << ",";
-	// 		}
-	// 	}
-	// }
-	// csv_output.close();
-	// pcl::io::savePCDFileASCII("cloud.pcd", *cloud);
+	std::ofstream csv_output(normal_csv_file);
+	for (int d = 0; d < 3; ++d) {
+		for (int i = 0; i < normals->size(); ++i) {
+			csv_output << normals->points[i].normal[d];
+			if (i == normals->size() - 1) {
+				csv_output << std::endl;
+			} else {
+				csv_output << ",";
+			}
+		}
+	}
+	csv_output.close();
+	pcl::io::savePCDFileASCII("cloud.pcd", *cloud);
 
 //	test.LoadPCDFile(test_file, cloud);
 	//test.OutlierRemoval(cloud);
