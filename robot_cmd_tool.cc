@@ -168,11 +168,18 @@ void Run() {
   		drake::jjz::X_ET);
 
 	Eigen::Isometry3d tf_camera_wrt_ee;
-  tf_camera_wrt_ee.matrix() <<
-  	0.37451879, -0.92700796,  0.        , -0.06087369,
-		0.92628617,  0.37501423,  0.        ,  0.03164403,
-		0.04158859, -0.00453463,  1.        ,  0.105     ,
-    0.        ,  0.        ,  0.        ,  1.0;
+	// Old values.
+  // tf_camera_wrt_ee.matrix() <<
+  // 	0.37451879, -0.92700796,  0.        , -0.06087369,
+		// 0.92628617,  0.37501423,  0.        ,  0.03164403,
+		// 0.04158859, -0.00453463,  1.        ,  0.105     ,
+  //   0.        ,  0.        ,  0.        ,  1.0;
+  tf_camera_wrt_ee.matrix() << 
+  	0.3908,   -0.9204,    0.0116,   -0.0769,
+    0.9196,    0.3898,   -0.0482,   -0.0088,
+    0.0399,    0.0295,    0.9988,    0.1319,
+         0,         0,         0,    1.0000;
+  
   //Eigen::Isometry3d tf_camera_wrt_hand = drake::jjz::X_ET.inverse() * tf_camera_wrt_ee;
   RigidBodyFrame<double> camera_frame("camera", tree.FindBody(drake::jjz::kEEName),
                                       tf_camera_wrt_ee);
