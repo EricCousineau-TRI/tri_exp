@@ -28,7 +28,7 @@
 
 
 const std::string kPath =
-    "drake/manipulation/models/iiwa_description/urdf/iiwa14_polytope_collision.urdf";
+    "/home/user/drake_siyuan/drake/manipulation/models/iiwa_description/urdf/iiwa14_polytope_collision.urdf";
 const std::string kEEName = "iiwa_link_7";
 const Eigen::Isometry3d kBaseOffset = Eigen::Isometry3d::Identity();
 
@@ -39,11 +39,10 @@ class AprilTagPerception {
   // Default is 36h11 family with A4 paper print size.
   AprilTagPerception() : tag_code_(AprilTags::tagCodes36h11) {
     tag_size_ = kTagSize;
-    // Average results from 2 rgb camera intrinsics calibration using ROS.
-    fx_ = 521;
-    fy_ = 570.3422241210938;
-    px_ = 319.5;
-    py_ = 239.5;
+    fx_ = 527.3764;
+    fy_ = 525.0941;
+    px_ = 293.0953;
+    py_ = 230.0253;
     // Initialize the april tag detector.
     tag_detector_ = new AprilTags::TagDetector(tag_code_);
   }
@@ -70,9 +69,10 @@ class AprilTagPerception {
     	*april_tag_pose = detections[0].getRelativeTransform(tag_size_, fx_, fy_, 
   			px_, py_);
   	}
-    return is_detected;
-    // std::cout << april_tag_pose.linear() << std::endl;
+  	// std::cout << april_tag_pose.linear() << std::endl;
     // std::cout << april_tag_pose.translation() << std::endl;
+    return is_detected;
+    
   }
  private:
   // April Detector.
@@ -105,9 +105,8 @@ class MinimumRobot{
 				return;
 			}
 		}
-		Eigen::VectorXd q_radian = q / 180.0 * M_PI;
 		duration = std::max(0.5, duration);
-		robot_controller_.MoveJ(q_radian, duration);
+		robot_controller_.MoveJ(q, duration);
 		WaitUntilControlAckDone();
 	}
 
@@ -155,7 +154,8 @@ int main(int argc, char** argv) {
     0.        ,  0.        ,  0.        ,  1.0;
   //Eigen::Isometry3d tf_camera_wrt_hand = drake::jjz::X_ET.inverse() * tf_camera_wrt_ee;
   RigidBodyFrame<double> camera_frame("camera", tree.FindBody(drake::jjz::kEEName),
-                                      tf_camera_wrt_ee);
+                                      Eigen::Isometry3d::Identity());
+                                      //tf_camera_wrt_ee);
 
   MinimumRobot robot(tree, camera_frame);
 
@@ -163,6 +163,7 @@ int main(int argc, char** argv) {
   double gaze_dist = atof(argv[1]);
  	double y_span = atof(argv[2]);
  	double x_span = atof(argv[3]);
+ 	int num_grid_per_dim = int(atof(argv[4]));
 
  	Eigen::VectorXd q0 = Eigen::VectorXd::Zero(7);
   q0[1] = -11;
@@ -173,7 +174,7 @@ int main(int argc, char** argv) {
 		std::vector<Eigen::VectorXd> joint_targets =
     	drake::jjz::ComputeCalibrationConfigurations(
   	  		tree, camera_frame, q0, target_location, gaze_dist, 
-  	  		y_span, x_span, 2, 2);
+  	  		y_span, x_span, num_grid_per_dim, num_grid_per_dim);
 
   double movement_duration = 2.0;
   ofstream output_ss;
@@ -190,5 +191,6 @@ int main(int argc, char** argv) {
   }
   }
   output_ss.close();
+  while(true) {};
   return 0;
 }

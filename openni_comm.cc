@@ -62,9 +62,9 @@ cv::Mat OpenNiComm::GetCurrentRGBImage() {
 	request_to_capture_rgb_ = false;
 	updated_rgb_ = false;
 
-	cv::namedWindow("test rgb");
-	cv::imshow("cv_image", stored_image_);
-	cv::waitKey(0);
+	// cv::namedWindow("test rgb");
+	// cv::imshow("cv_image", stored_image_);
+	// cv::waitKey(0);
 	return stored_image_;
 }
 

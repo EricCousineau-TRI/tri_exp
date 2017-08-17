@@ -21,7 +21,6 @@ int main(int argc, char** argv) {
 		new pcl::PointCloud<ColoredPointTNormal>);
 	pcl::PCDReader reader;
 	reader.read<ColoredPointTNormal>(test_file, *cloud_and_normal);
-
 	// tmp tf for MoveJ 53.741  33.0757 -6.67238 -38.0249 -29.5578  118.952 -2.52224 5
 	Eigen::Affine3f tf_tmp;
 	// tf_tmp.matrix() << -0.799218 , 0.516049,  0.272282,  0.463091,
@@ -35,7 +34,8 @@ int main(int argc, char** argv) {
         				0,         0,         0,         1;
 
     test.ApplyTransformToCombinedPointCloud(tf_tmp, cloud_and_normal);
-
+    test.VisualizePointCloudDrake(cloud_and_normal);
+    std::cout << "Should have visualized" << std::endl;
 	pcl::PointIndices::Ptr inliers(new pcl::PointIndices);
 	Eigen::Vector4d coeffs_plane;
 	test.FindPlane(cloud_and_normal, &coeffs_plane, inliers, 0.005);

@@ -114,6 +114,12 @@ class PointCloudPerception {
       Eigen::Isometry3d X_WC = Eigen::Isometry3d::Identity(),
       const std::string& suffix = "RGBD");
 
+    void VisualizePointCloudDrake(
+      const boost::shared_ptr<pcl::PointCloud<ColoredPointTNormal>> cloud,
+      Eigen::Isometry3d X_WC = Eigen::Isometry3d::Identity(),
+      const std::string& suffix = "RGBD");
+
+
     // Todo (Jiaji): refractor and redesign to fork a new thread just for visualization.
     void VisualizePointCloudAndNormal(const boost::shared_ptr<pcl::PointCloud<ColoredPointT>> cloud,
       boost::shared_ptr<pcl::PointCloud<pcl::Normal>> normals,
