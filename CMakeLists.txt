@@ -12,6 +12,7 @@ find_package(PCL 1.8 REQUIRED)
 find_package(OpenCV 2.4.8 EXACT REQUIRED)
 #find_package(OpenCV 3.3.0 EXACT REQUIRED PATHS /home/user/opencv/build)
 find_package(drake REQUIRED)
+find_package(lcm REQUIRED)
 
 include_directories(
   /usr/local/include/pcl-1.8
@@ -19,6 +20,8 @@ include_directories(
   /usr/include/openni2
 /home/user/drake_bazel_build/include/eigen3
 #${PCL_INCLUDE_DIRS}
+${DRAKE_INCLUDE_DIRS}
+${LCM_INCLUE_DIRS}
 ${OpenCV_INCLUDE_DIRS}
 ${apriltags_INCLUDE_DIR}
 )
