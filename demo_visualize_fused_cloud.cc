@@ -24,10 +24,16 @@ int main(int argc, char** argv) {
 
 	// tmp tf for MoveJ 53.741  33.0757 -6.67238 -38.0249 -29.5578  118.952 -2.52224 5
 	Eigen::Affine3f tf_tmp;
-	tf_tmp.matrix() << -0.799218 , 0.516049,  0.272282,  0.463091,
- 			  0.352113,  0.817477, -0.444457,  0.449454,
-			 -0.487101, -0.255781, -0.853417,  0.658012,
-        		0,         0,         0,         1;
+	// tf_tmp.matrix() << -0.799218 , 0.516049,  0.272282,  0.463091,
+ // 			  0.352113,  0.817477, -0.444457,  0.449454,
+	// 		 -0.487101, -0.255781, -0.853417,  0.658012,
+ //        		0,         0,         0,         1;
+	// For moveJ MoveJ  56.3677  52.9384 -14.5931 -29.0872 -26.5496  118.171  3.13296 5
+	tf_tmp.matrix()	 << -0.771183,  0.587625,  0.209943,  0.518778,
+ 						0.338681,  0.704428, -0.612323,  0.519177,
+						-0.539048, -0.398092, -0.762224,  0.488759,
+        				0,         0,         0,         1;
+
     test.ApplyTransformToCombinedPointCloud(tf_tmp, cloud_and_normal);
 
 	pcl::PointIndices::Ptr inliers(new pcl::PointIndices);
@@ -35,9 +41,9 @@ int main(int argc, char** argv) {
 	test.FindPlane(cloud_and_normal, &coeffs_plane, inliers, 0.005);
 	std::cout << coeffs_plane << std::endl;
 	Eigen::Vector3f min_range;
-	min_range << 0.45, -0.2, -0.2;
+	min_range << 0.4, -0.3, -0.2;
 	Eigen::Vector3f max_range;
-	max_range << 0.9, 0.2, 0.5;
+	max_range << 0.9, 0.3, 0.5;
 	test.CutWithWorkSpaceConstraints(cloud_and_normal, min_range, max_range);
 
   	// Get rid of the table.

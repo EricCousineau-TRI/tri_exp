@@ -31,9 +31,10 @@ void OpenNiComm::GetCurrentPointCloud(
 	std::unique_lock<std::mutex> lock(mtx_);
 	request_to_capture_pointcloud_ = true;
 	// Wait until the point cloud is acquired.
+	// The updated_pointcloud boolean variable also needs to be locked 
+	// properly.
 	while (!updated_pointcloud_){
 		// Sleep the main thread to wait for device call back function.
-		//boost::this_thread::sleep (boost::posix_time::seconds (0.001));
 		lock.unlock();
 		usleep(0.01 * 1e+6);
 		lock.lock();
@@ -50,10 +51,13 @@ void OpenNiComm::GetCurrentPointCloud(
 }
 
 cv::Mat OpenNiComm::GetCurrentRGBImage() {
+	std::unique_lock<std::mutex> lock(mtx_);
 	request_to_capture_rgb_ = true;
 	while (!updated_rgb_) {
 		// Sleep the main thread to wait for device call back function.
-		boost::this_thread::sleep (boost::posix_time::seconds (0.001));
+		lock.unlock();
+		usleep(0.01 * 1e+6);
+		lock.lock();
 	};
 	request_to_capture_rgb_ = false;
 	updated_rgb_ = false;
@@ -66,9 +70,11 @@ cv::Mat OpenNiComm::GetCurrentRGBImage() {
 
 cv::Mat OpenNiComm::GetCurrentDepthImage() {
 	request_to_capture_depth_ = true;
+	std::unique_lock<std::mutex> lock(mtx_);
 	while (!updated_depth_) {
-		//std::cout << "not yet updated" << std::endl;
-		boost::this_thread::sleep (boost::posix_time::seconds (0.001));
+		lock.unlock();
+		usleep(0.01 * 1e+6);
+		lock.lock();
 	};
 	request_to_capture_depth_ = false;
 	updated_depth_ = false;
@@ -83,6 +89,7 @@ void OpenNiComm::rgb_depth_image_cb_(const boost::shared_ptr<pcl::io::Image>& rg
      const boost::shared_ptr<pcl::io::DepthImage>& depth_image,
     float reciprocalFocalLength) {
 	//std::cout << "cb_rgb_depth" << std::endl;
+	std::unique_lock<std::mutex> lock(mtx_);
 	if (request_to_capture_rgb_) {
 		stored_image_ = cv::Mat(rgb_image->getHeight(), rgb_image->getWidth(), CV_8UC3);
     rgb_image->fillRGB(stored_image_.cols, stored_image_.rows, stored_image_.data,
@@ -95,11 +102,10 @@ void OpenNiComm::rgb_depth_image_cb_(const boost::shared_ptr<pcl::io::Image>& rg
 		// Because getData() returns const and opencv mat does not take const void*.
 		void * buffer = new char[depth_image->getDataSize()];
 		memcpy(buffer, depth_image->getData(), depth_image->getDataSize());
-	  stored_depth_image_ = cv::Mat(depth_image->getHeight(), depth_image->getWidth(),
-	  		CV_16UC1, buffer, depth_image->getStep());
-	  //depth_image->fillDepthImageRaw(stored_depth_image_.cols, stored_depth_image_.rows,
-	  //	stored_depth_image_.data);
-
+  	stored_depth_image_ = cv::Mat(depth_image->getHeight(), depth_image->getWidth(),
+  			CV_16UC1, buffer, depth_image->getStep());
+  	//depth_image->fillDepthImageRaw(stored_depth_image_.cols, stored_depth_image_.rows,
+  	//	stored_depth_image_.data);
 		updated_depth_ = true;
 	}
 }
@@ -107,8 +113,7 @@ void OpenNiComm::rgb_depth_image_cb_(const boost::shared_ptr<pcl::io::Image>& rg
 void OpenNiComm::cloud_cb_(const boost::shared_ptr<const pcl::PointCloud<pcl::PointXYZRGBA>> & cloud) {
 	std::lock_guard<std::mutex> lock(mtx_);
 	 if (request_to_capture_pointcloud_) {
-	   //mtx_.lock();
-	
+	   //mtx_.lock();	
  	   stored_cloud_->resize(cloud->size());
  	   std::cout << "cloud cb" << std::endl;
  	   for (int i = 0; i < cloud->size(); ++i) {

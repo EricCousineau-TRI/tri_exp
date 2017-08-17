@@ -177,7 +177,7 @@ void Run() {
   RigidBodyFrame<double> camera_frame("camera", tree.FindBody(drake::jjz::kEEName),
                                       tf_camera_wrt_ee);
 
-	double gaze_dist = 0.9;
+	double gaze_dist = 0.8;
  	Eigen::VectorXd q0 = Eigen::VectorXd::Zero(7);
   q0[1] = -11;
   q0[3] = -69;
@@ -186,13 +186,13 @@ void Run() {
 		std::vector<Eigen::VectorXd> joint_targets =
     	drake::jjz::ComputeCalibrationConfigurations(
   	  		tree, camera_frame, q0, Eigen::Vector3d(0.65, 0, -0.1), 
-    			gaze_dist, 1.0, 0, 2, 2);
+    			gaze_dist, 1.5, 0.0, 2, 2);
   for (int i = 0; i < joint_targets.size(); ++i) {
   	std::cout << (180 / M_PI) * joint_targets[i].transpose() << std::endl;
   }
 
-	//CmdRobot cmd_robot(tree, camera_frame);
-	CmdRobot cmd_robot(tree, tool_frame);
+	CmdRobot cmd_robot(tree, camera_frame);
+	//CmdRobot cmd_robot(tree, tool_frame);
 	InitializeKeyBoardMapping();
 
 	while (true) {

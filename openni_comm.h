@@ -18,10 +18,6 @@ class OpenNiComm{
   cv::Mat GetCurrentRGBImage();
   cv::Mat GetCurrentDepthImage();
 
-  // void Run() {
-  //   camera_interface_->start ();
-  // }
-
   void Stop() {
     camera_interface_->stop();
   }

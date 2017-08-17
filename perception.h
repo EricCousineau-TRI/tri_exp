@@ -218,11 +218,6 @@ class PointCloudPerception {
       boost::shared_ptr<pcl::PointCloud<T2>> cloud_with_normal_tgt(
         new pcl::PointCloud<T2>);
 
-      const pcl::PointCloud<T> & src_alias = *src;
-      const pcl::PointCloud<pcl::Normal> & normals_src_alias = *normals_src;
-
-      //ConcatPointAndNormal(src, normals_src, cloud_with_normal_src);
-      //ConcatPointAndNormal(tgt, normals_tgt, cloud_with_normal_tgt);
       
       pcl::concatenateFields(*src, *normals_src, *cloud_with_normal_src);
       pcl::concatenateFields(*tgt, *normals_tgt, *cloud_with_normal_tgt);
