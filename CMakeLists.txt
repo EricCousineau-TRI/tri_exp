@@ -45,11 +45,13 @@ target_link_libraries (kuka_camera_calibrate ${PCL_LIBRARIES} ${OpenCV_LIBS} apr
 #add_executable (test_openni_comm openni_comm.cc)
 #target_link_libraries (test_openni_comm ${OpenCV_LIBS} ${PCL_LIBRARIES})
 
-add_executable (demo_visualize demo_visualize_fused_cloud.cc perception.cc point_cloud_registration.cc)
-target_link_libraries (demo_visualize ${PCL_LIBRARIES} ${OpenCV_LIBS})
 
 add_library(lib_perception perception.cc point_cloud_registration.cc openni_comm.cc)
-target_link_libraries(lib_perception ${PCL_LIBRARIES} ${OpenCV_LIBS} drake::drake)
+target_link_libraries(lib_perception ${PCL_LIBRARIES} ${OpenCV_LIBS} drake::drake drake::drake-lcmtypes-cpp)
+
+add_executable (demo_visualize demo_visualize_fused_cloud.cc)
+target_link_libraries (demo_visualize ${PCL_LIBRARIES} ${OpenCV_LIBS} lib_perception )
+
 
 add_executable (test_hand_eye hand_eye.cc)
 target_link_libraries(test_hand_eye lib_perception drake::drake ${PCL_LIBRARIES} ${OpenCV_LIBS})
