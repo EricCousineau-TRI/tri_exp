@@ -15,6 +15,13 @@
 #include "drake/multibody/parsers/urdf_parser.h"
 
 #include "drake/manipulation/util/trajectory_utils.h"
+#include "openni_comm.h"
+#include "perception.h"
+
+const Eigen::Isometry3d tf_hand_to_ee(
+    Eigen::Translation<double, 3>(Eigen::Vector3d(0, 0, 0.2384)) *
+    Eigen::AngleAxis<double>(-22. / 180. * M_PI, Eigen::Vector3d::UnitZ()) *
+    Eigen::AngleAxis<double>(M_PI, Eigen::Vector3d::UnitY()));
 
 std::vector<std::string> split(const std::string &s, char delim) {
     std::vector<std::string> elems;
@@ -165,21 +172,14 @@ void Run() {
   drake::parsers::urdf::AddModelInstanceFromUrdfFile(
       kPath, drake::multibody::joints::kFixed, nullptr, &tree);
 	RigidBodyFrame<double> tool_frame("tool", tree.FindBody(drake::jjz::kEEName),
-  		drake::jjz::X_ET);
+  		tf_hand_to_ee);
 
 	Eigen::Isometry3d tf_camera_wrt_ee;
-	// Old values.
-  // tf_camera_wrt_ee.matrix() <<
-  // 	0.37451879, -0.92700796,  0.        , -0.06087369,
-		// 0.92628617,  0.37501423,  0.        ,  0.03164403,
-		// 0.04158859, -0.00453463,  1.        ,  0.105     ,
-  //   0.        ,  0.        ,  0.        ,  1.0;
   tf_camera_wrt_ee.matrix() << 
-  	0.3908,   -0.9204,    0.0116,   -0.0769,
-    0.9196,    0.3898,   -0.0482,   -0.0088,
-    0.0399,    0.0295,    0.9988,    0.1319,
+    0.3994,   -0.9168,   -0.0015,   -0.0446,
+    0.9163,    0.3992,   -0.0317,    0.0011,
+    0.0297,    0.0113,    0.9995,    0.1121,
          0,         0,         0,    1.0000;
-  
   //Eigen::Isometry3d tf_camera_wrt_hand = drake::jjz::X_ET.inverse() * tf_camera_wrt_ee;
   RigidBodyFrame<double> camera_frame("camera", tree.FindBody(drake::jjz::kEEName),
                                       tf_camera_wrt_ee);
@@ -201,6 +201,15 @@ void Run() {
 	CmdRobot cmd_robot(tree, camera_frame);
 	//CmdRobot cmd_robot(tree, tool_frame);
 	InitializeKeyBoardMapping();
+	OpenNiComm camera_interface;
+	Eigen::Affine3f tf;
+	Eigen::Isometry3d tf2;	
+	PointCloudPerception<ColoredPointT, ColoredPointTNormal> test;
+	boost::shared_ptr<pcl::PointCloud<ColoredPointT>> cloud(
+			new pcl::PointCloud<ColoredPointT>);
+	Eigen::Vector4d coeffs_plane;
+	pcl::PointIndices::Ptr inliers(new pcl::PointIndices);
+	double dist_threshold = 0.01;
 
 	while (true) {
 		std::string cmd_string;
@@ -216,7 +225,13 @@ void Run() {
 				break;
 			
 			case evGetC:
-				cmd_robot.GetCartesianPosition();
+				tf2 = cmd_robot.GetCartesianPosition();				
+				camera_interface.GetCurrentPointCloud(cloud);				
+				tf.matrix() = tf2.matrix().cast<float>();
+				test.ApplyTransformToPointCloud(tf, cloud);
+				test.VisualizePointCloudDrake(cloud);
+				test.FindPlane(cloud, &coeffs_plane, inliers, dist_threshold);
+				std::cout << coeffs_plane << std::endl;
 				break;
 			
 			case evMoveJ:

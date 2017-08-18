@@ -28,7 +28,7 @@ class OpenNiComm{
       float reciprocalFocalLength);
  	void cloud_cb_ (const boost::shared_ptr<const pcl::PointCloud<pcl::PointXYZRGBA>> & cloud);
 
-  pcl::Grabber* camera_interface_;
+  pcl::io::OpenNI2Grabber* camera_interface_;
 
   bool request_to_capture_rgb_;
   bool request_to_capture_depth_;

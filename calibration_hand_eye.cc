@@ -39,10 +39,10 @@ class AprilTagPerception {
   // Default is 36h11 family with A4 paper print size.
   AprilTagPerception() : tag_code_(AprilTags::tagCodes36h11) {
     tag_size_ = kTagSize;
-    fx_ = 527.3764;
-    fy_ = 525.0941;
-    px_ = 293.0953;
-    py_ = 230.0253;
+    fx_ = 515.5;
+    fy_ = 515.5;
+    px_ = 304.5;
+    py_ = 227.2;
     // Initialize the april tag detector.
     tag_detector_ = new AprilTags::TagDetector(tag_code_);
   }
@@ -147,11 +147,16 @@ int main(int argc, char** argv) {
 		kPath, drake::multibody::joints::kFixed, nullptr, &tree);
 	// Use rough caliration from last time to locate the camera frame.
 	Eigen::Isometry3d tf_camera_wrt_ee;
+  // tf_camera_wrt_ee.matrix() <<
+  // 	0.37451879, -0.92700796,  0.        , -0.06087369,
+		// 0.92628617,  0.37501423,  0.        ,  0.03164403,
+		// 0.04158859, -0.00453463,  1.        ,  0.105     ,
+  //   0.        ,  0.        ,  0.        ,  1.0;
   tf_camera_wrt_ee.matrix() <<
-  	0.37451879, -0.92700796,  0.        , -0.06087369,
-		0.92628617,  0.37501423,  0.        ,  0.03164403,
-		0.04158859, -0.00453463,  1.        ,  0.105     ,
-    0.        ,  0.        ,  0.        ,  1.0;
+        0.4203,   -0.9074,    0.0061,   -0.0468,
+    0.9071,    0.4200,   -0.0292,    0.0053,
+    0.0239,    0.0178,    0.9996,    0.1455,
+         0,         0,         0,    1.0000;
   //Eigen::Isometry3d tf_camera_wrt_hand = drake::jjz::X_ET.inverse() * tf_camera_wrt_ee;
   RigidBodyFrame<double> camera_frame("camera", tree.FindBody(drake::jjz::kEEName),
                                       Eigen::Isometry3d::Identity());
@@ -170,7 +175,7 @@ int main(int argc, char** argv) {
   q0[3] = -69;
   q0[5] = 109;
   q0 = q0 / 180. * M_PI;
-  Eigen::Vector3d target_location(0.65, 0, -0.1);
+  Eigen::Vector3d target_location(0.60, 0, 0);
 		std::vector<Eigen::VectorXd> joint_targets =
     	drake::jjz::ComputeCalibrationConfigurations(
   	  		tree, camera_frame, q0, target_location, gaze_dist, 

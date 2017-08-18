@@ -22,6 +22,8 @@ OpenNiComm::OpenNiComm() {
   updated_depth_ = false;
   updated_pointcloud_ = false;
 
+  camera_interface_->setDepthCameraIntrinsics(550, 550, 297.31, 228.32);
+  camera_interface_->setRGBCameraIntrinsics(515.9, 515.4, 304.53, 227.2);
   camera_interface_->start ();
 
 };
@@ -79,9 +81,9 @@ cv::Mat OpenNiComm::GetCurrentDepthImage() {
 	request_to_capture_depth_ = false;
 	updated_depth_ = false;
 
-	cv::namedWindow("test depth");
-	cv::imshow("cv_depth_image", stored_depth_image_);
-	cv::waitKey(0);
+	// cv::namedWindow("test depth");
+	// cv::imshow("cv_depth_image", stored_depth_image_);
+	// cv::waitKey(0);
 	return stored_depth_image_;
 }
 

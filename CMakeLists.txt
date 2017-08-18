@@ -62,7 +62,7 @@ add_executable (test_hand_eye hand_eye.cc)
 target_link_libraries(test_hand_eye lib_perception drake::drake ${PCL_LIBRARIES} ${OpenCV_LIBS})
 
 add_executable (robot_cmd_tool robot_cmd_tool.cc)
-target_link_libraries(robot_cmd_tool drake::drake)
+target_link_libraries(robot_cmd_tool drake::drake lib_perception)
 
 add_executable (calibration_hand_eye calibration_hand_eye.cc openni_comm.cc)
 target_link_libraries(calibration_hand_eye ${PCL_LIBRARIES} ${OpenCV_LIBS} apriltags drake::drake)
