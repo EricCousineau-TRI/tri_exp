@@ -102,7 +102,7 @@ class CmdRobot {
 
 	// "MoveC". Linear movement in Cartesian space.
 	void MoveToCartesianPosition(const Eigen::Isometry3d& tgt_pose_ee,
-														  double duration) {
+														  double duration, double fz = 0, double mu = 0) {
 		robot_controller_.GetIiwaState(&robot_state_);
 		Eigen::Isometry3d cur_pose_ee = robot_state_.get_X_WT();
   	drake::manipulation::PiecewiseCartesianTrajectory<double> traj =
@@ -112,15 +112,12 @@ class CmdRobot {
           	                                   drake::Vector3<double>::Zero());
 
 	  // Todo(Jiaji) : This is a hack just to use the existing api.
-		double dummy_fz = 0;
-		double dummy_mu = 0;
-
 	  //std::cout << cur_pose_ee.matrix() << "\n\n";
 	  //std::cout << tgt_pose_ee.matrix() << "\n\n";
 
 	  //getchar();
 
-		robot_controller_.MoveToolFollowTraj(traj, dummy_fz, dummy_mu, dummy_mu);
+		robot_controller_.MoveToolFollowTraj(traj, fz, 0, mu);
 		WaitUntilControlAckDone();
 
 	}
@@ -198,10 +195,10 @@ void Run() {
   	std::cout << (180 / M_PI) * joint_targets[i].transpose() << std::endl;
   }
 
-	CmdRobot cmd_robot(tree, camera_frame);
-	//CmdRobot cmd_robot(tree, tool_frame);
+	//CmdRobot cmd_robot(tree, camera_frame);
+	CmdRobot cmd_robot(tree, tool_frame);
 	InitializeKeyBoardMapping();
-	OpenNiComm camera_interface;
+	//OpenNiComm camera_interface;
 	Eigen::Affine3f tf;
 	Eigen::Isometry3d tf2;	
 	PointCloudPerception<ColoredPointT, ColoredPointTNormal> test;
@@ -219,6 +216,8 @@ void Run() {
 		// xyzrpy pose.
 		Eigen::VectorXd pose_cmd(6);		
 		Eigen::Isometry3d tgt_pose = Eigen::Isometry3d::Identity();
+		double fz;
+		double mu;
 		switch (s_mapStringValues[elems[0]]) {
 			case evGetJ:
 				cmd_robot.GetJointPosition();
@@ -226,12 +225,12 @@ void Run() {
 			
 			case evGetC:
 				tf2 = cmd_robot.GetCartesianPosition();				
-				camera_interface.GetCurrentPointCloud(cloud);				
-				tf.matrix() = tf2.matrix().cast<float>();
-				test.ApplyTransformToPointCloud(tf, cloud);
-				test.VisualizePointCloudDrake(cloud);
-				test.FindPlane(cloud, &coeffs_plane, inliers, dist_threshold);
-				std::cout << coeffs_plane << std::endl;
+				// camera_interface.GetCurrentPointCloud(cloud);				
+				// tf.matrix() = tf2.matrix().cast<float>();
+				// test.ApplyTransformToPointCloud(tf, cloud);
+				// test.VisualizePointCloudDrake(cloud);
+				// test.FindPlane(cloud, &coeffs_plane, inliers, dist_threshold);
+				// std::cout << coeffs_plane << std::endl;
 				break;
 			
 			case evMoveJ:
@@ -248,11 +247,19 @@ void Run() {
 				break;
 
 			case evMoveC:
-				if (elems.size() == 8) {
-					for (int i = 1; i < elems.size() - 1; ++i) {
+				if (elems.size() >= 8 && elems.size () <= 10) {
+					for (int i = 1; i < 7; ++i) {
 						pose_cmd[i - 1] = atof(elems[i].c_str());
 					}
-					double duration = atof(elems[elems.size() - 1].c_str());
+					double duration = atof(elems[7].c_str());
+					fz = 0;
+					mu = 0;
+					if (elems.size() >= 9) {
+						fz = atof(elems[8].c_str());
+					}
+					if (elems.size() >= 10) {
+						mu = atof(elems[9].c_str());
+					}
 					// Roll Pitch Yaw.
 					Eigen::Matrix3f M_rot = 
 						(Eigen::AngleAxisf(pose_cmd(3) / 180.0 * M_PI, Eigen::Vector3f::UnitX())
@@ -262,9 +269,11 @@ void Run() {
 					tgt_pose.linear() = M_rot.cast<double>();
 					std::cout << tgt_pose.matrix() << std::endl;
 					tgt_pose.translation() = pose_cmd.head(3);
-					cmd_robot.MoveToCartesianPosition(tgt_pose, duration);
+					cmd_robot.MoveToCartesianPosition(tgt_pose, duration, fz, mu);
+
 				} else {
-					std::cout << "wrong number of arguments. xyzrpy + time" << std::endl;
+					std::cout << "wrong number of arguments. xyzrpy + time + fz(optional) + mu(optional)" 
+					<< std::endl;
 				}
 				break;
 

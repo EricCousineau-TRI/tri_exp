@@ -99,9 +99,14 @@ class PointCloudPerception {
     // The reason for cover_ratio not equals to 1 is to be robust to outliers.
     // Top left corner is (xmax, ymax, zmax), lower right corner is (xmin, ymin, zmin).
     void FindBoundingBox(const boost::shared_ptr<pcl::PointCloud<T>> cloud,
-        Eigen::Vector3f* center, Eigen::Vector3f* top_right_corner,
-        Eigen::Vector3f* lower_left_corner, double cover_ratio = 0.95);
-    //void SubtractTable(boost::shared_ptr<pcl::PointCloud<T2>> cloud);
+        Eigen::Vector3f* center, Eigen::Vector3f* top_right_corner, 
+        Eigen::Vector3f* lower_left_corner, Eigen::Matrix3f* orientation, 
+        double cover_ratio = 0.95);
+
+    void FindBoundingBox(const boost::shared_ptr<pcl::PointCloud<T2>> cloud,
+        Eigen::Vector3f* center, Eigen::Vector3f* top_left_corner, 
+        Eigen::Vector3f* lower_right_corner, Eigen::Matrix3f* orientation,
+        double cover_ratio = 0.95);
 
     // Display the point cloud until 'q' key is pressed.
     void VisualizePointCloud(const boost::shared_ptr<pcl::PointCloud<ColoredPointT>> cloud,
@@ -180,28 +185,30 @@ class PointCloudPerception {
       PointCloudPairRegistration reg;
       reg.RegisterPointCloudPair<T2>(cloud_with_normal_src, cloud_with_normal_tgt,
                                     combined, transform);
-
     }
 
      void FuseMultiPointCloudsNew(
         const std::vector< boost::shared_ptr<pcl::PointCloud<T2>> > point_clouds,
         boost::shared_ptr<pcl::PointCloud<T2>> combined_cloud) {
 
-      Eigen::Affine3f global_tf_affine = Eigen::Affine3f::Identity();
-      //Eigen::Matrix4f global_transform = Eigen::Matrix4f::Identity();
-      for (unsigned i = 0; i < point_clouds.size() - 1; ++i) {
-        //if (i == 1) continue;
-        boost::shared_ptr<pcl::PointCloud<T2>> tmp_combined_cloud(new pcl::PointCloud<T2>);
-        Eigen::Matrix4f relative_transform;
-        //std::cout << point_clouds[i-1]->size() << std::endl;
-        FusePointCloudPairNew(point_clouds[point_clouds.size() - 1], point_clouds[i],  
-            tmp_combined_cloud, &relative_transform);
-        // global_tf_affine.matrix() = global_tf_affine.matrix() * relative_transform;
-        // ApplyTransformToCombinedPointCloud(global_tf_affine, tmp_combined_cloud);
-        // *combined_cloud += *tmp_combined_cloud;
-        std::string f_name = "test" + std::to_string(i) + ".pcd";
-        pcl::io::savePCDFileASCII(f_name, *tmp_combined_cloud);
-        *combined_cloud += *tmp_combined_cloud;
+      // Eigen::Affine3f global_tf_affine = Eigen::Affine3f::Identity();
+      // //Eigen::Matrix4f global_transform = Eigen::Matrix4f::Identity();
+      // for (unsigned i = 0; i < point_clouds.size() - 1; ++i) {
+      //   //if (i == 1) continue;
+      //   boost::shared_ptr<pcl::PointCloud<T2>> tmp_combined_cloud(new pcl::PointCloud<T2>);
+      //   Eigen::Matrix4f relative_transform;
+      //   //std::cout << point_clouds[i-1]->size() << std::endl;
+      //   FusePointCloudPairNew(point_clouds[point_clouds.size() - 1], point_clouds[i],  
+      //       tmp_combined_cloud, &relative_transform);
+      //   // global_tf_affine.matrix() = global_tf_affine.matrix() * relative_transform;
+      //   // ApplyTransformToCombinedPointCloud(global_tf_affine, tmp_combined_cloud);
+      //   // *combined_cloud += *tmp_combined_cloud;
+      //   std::string f_name = "test" + std::to_string(i) + ".pcd";
+      //   pcl::io::savePCDFileASCII(f_name, *tmp_combined_cloud);
+      //   *combined_cloud += *tmp_combined_cloud;
+      // }
+      for (unsigned i = 0; i < point_clouds.size(); ++i) {
+        *combined_cloud += *(point_clouds[i]);
       }
     }
 

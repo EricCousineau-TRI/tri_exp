@@ -124,18 +124,18 @@ void HandEye::ScanNew(OpenNiComm& camera_interface,
 	  //perception_proc.DownSample(cloud, 0.00001);
 		Eigen::Vector3f min_range;
 
-		min_range << 0.45, -0.4, -0.2;
+		min_range << 0.4, -0.45, -0.2;
 		Eigen::Vector3f max_range;
-		max_range << 0.9, 0.4, 0.5;
+		max_range << 0.9, 0.45, 0.5;
 		perception_proc.CutWithWorkSpaceConstraints(cloud_with_normal, min_range, max_range);
 
 	  // Get rid of the table.
-	  double thickness = 0.005;
+	  double thickness = 0.01;
 	  perception_proc.SubtractTable(cloud_with_normal, thickness);
 
 	  // std::vector<int> indices;
 	  // pcl::removeNaNFromPointCloud(*cloud,*cloud, indices);
-		perception_proc.FilterPointsBasedOnScatterness(cloud_with_normal, 0.98);
+		//perception_proc.FilterPointsBasedOnScatterness(cloud_with_normal, 0.98);
 		point_clouds.push_back(cloud_with_normal);
 	}
 	std::cout << "to fuse " << point_clouds.size() << " clouds" << std::endl;
@@ -153,13 +153,13 @@ void doMainNew(PointCloudPerception<ColoredPointT, ColoredPointTNormal> & percep
 		perception_proc.LoadPCDFile(file_name, cloud);
 
 		Eigen::Vector3f min_range;
-		min_range << 0.45,-0.4,-0.2;
+		min_range << 0.4,-0.45,-0.2;
 		Eigen::Vector3f max_range;
-		max_range << 0.9,0.4,0.5;
+		max_range << 0.9,0.45,0.5;
 		perception_proc.CutWithWorkSpaceConstraints(cloud, min_range, max_range);
 
     // Get rid of the table.
-	  double thickness = 0.005;
+	  double thickness = 0.01;
 	  perception_proc.SubtractTable(cloud, thickness);
 
 	  std::vector<int> indices;
@@ -204,7 +204,7 @@ void HandEye::Scan(OpenNiComm& camera_interface,
 	  //perception_proc.DownSample(cloud, 0.00001);
 		Eigen::Vector3f min_range;
 
-		min_range << 0.45, -0.4, -0.2;
+		min_range << 0.4, -0.4, -0.2;
 		Eigen::Vector3f max_range;
 		max_range << 0.9, 0.4, 0.5;
 		perception_proc.CutWithWorkSpaceConstraints(cloud, min_range, max_range);
@@ -290,11 +290,17 @@ int main(int argc, char** argv ) {
 
   // Our calbiration result last time.
   Eigen::Isometry3d tf_camera_wrt_ee;
-  tf_camera_wrt_ee.matrix() <<
-  	0.37451879, -0.92700796,  0.        , -0.06087369,
-		0.92628617,  0.37501423,  0.        ,  0.03164403,
-		0.04158859, -0.00453463,  1.        ,  0.105     ,
-    0.        ,  0.        ,  0.        ,  1.0;
+  // tf_camera_wrt_ee.matrix() <<
+  // 	0.37451879, -0.92700796,  0.        , -0.06087369,
+		// 0.92628617,  0.37501423,  0.        ,  0.03164403,
+		// 0.04158859, -0.00453463,  1.        ,  0.105     ,
+  //   0.        ,  0.        ,  0.        ,  1.0;
+
+    tf_camera_wrt_ee.matrix() << 
+    0.3994,   -0.9168,   -0.0015,   -0.0446,
+    0.9163,    0.3992,   -0.0317,    0.0011,
+    0.0297,    0.0113,    0.9995,    0.1121,
+         0,         0,         0,    1.0000;
   Eigen::Isometry3d tf_camera_wrt_hand = drake::jjz::X_ET.inverse() * tf_camera_wrt_ee;
   HandEye hand_eye_system(tree, tool_frame);
 
@@ -348,10 +354,11 @@ int main(int argc, char** argv ) {
   if (argc > 1) {
 	  OpenNiComm camera_interface;
    	double gaze_dist = 0.9;
-		std::vector<Eigen::VectorXd> joint_targets =
-    	drake::jjz::ComputeCalibrationConfigurations(
-  	  		tree, camera_frame, q0, Eigen::Vector3d(0.65, 0, -0.1), 
-    			gaze_dist, atof(argv[1]), atof(argv[2]), 2, 2);
+		// std::vector<Eigen::VectorXd> joint_targets =
+  //   	drake::jjz::ComputeCalibrationConfigurations(
+  // 	  		tree, camera_frame, q0, Eigen::Vector3d(0.65, 0, -0.1), 
+  //   			gaze_dist, atof(argv[1]), atof(argv[2]), 2, 2);
+  	std::vector<Eigen::VectorXd> joint_targets;
   	joint_targets.push_back(joint_target_up);
 	  hand_eye_system.ScanNew(camera_interface, perception_proc,
 	   		joint_targets, duration_movement, fused_cloud);
@@ -359,6 +366,17 @@ int main(int argc, char** argv ) {
 	} else {
   	doMainNew(perception_proc, 5, fused_cloud);
 	}
+	Eigen::Vector3f center, top_right_corner, lower_left_corner;
+	Eigen::Matrix3f orientation;
+	double cover_ratio = 0.95;
+  perception_proc.FindBoundingBox(fused_cloud, &center, &top_right_corner, 
+  	&lower_left_corner, &orientation, cover_ratio);
+  std::cout << "Center point bbox: " << center.transpose() << std::endl;
+  std::cout << "Top right corner: " << top_right_corner.transpose() << std::endl;
+  std::cout << "Lower left corner: " << lower_left_corner.transpose() << std::endl;
+  std::cout << "Orientation: " << orientation << std::endl;
+  std::cout << "Yaw angle: " << 
+  		(atan2(orientation(1,0), orientation(0,0)) * 180 / M_PI) << std::endl;
   pcl::io::savePCDFileASCII("test_fused.pcd", *fused_cloud);
 
   // hand_eye_system.MoveRobotJointStraightLine(joint_target1, duration_movement);

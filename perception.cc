@@ -326,8 +326,9 @@ void PointCloudPerception<T, T2>::SelectNearCentroidPoints(
 template <typename T, typename T2>
 void PointCloudPerception<T, T2>::FindBoundingBox(
 		const boost::shared_ptr<pcl::PointCloud<T>> cloud,
-		Eigen::Vector3f* center, Eigen::Vector3f* top_left_corner, 
-		Eigen::Vector3f* lower_right_corner, double cover_ratio) {
+		Eigen::Vector3f* center, Eigen::Vector3f* top_corner, 
+		Eigen::Vector3f* lower_corner, Eigen::Matrix3f* orientation,
+		double cover_ratio) {
 	int num_pts = cloud->size();
 	double left_scale = 0;
 	double right_scale = 1.0;
@@ -342,6 +343,9 @@ void PointCloudPerception<T, T2>::FindBoundingBox(
 	pcl::PCA<T> pca;
 	pca.setInputCloud(cloud);
 	Eigen::Matrix3f eigen_vectors = pca.getEigenVectors();
+	*orientation = eigen_vectors;
+	eigen_vectors.col(3) = eigen_vectors.col(1).cross(eigen_vectors.col(2));
+
 	std::cout << "PCAs:" << std::endl;
 	std::cout << eigen_vectors << std::endl;
 	boost::shared_ptr<pcl::PointCloud<T>> cloud_projected (new pcl::PointCloud<T>); 
@@ -366,9 +370,63 @@ void PointCloudPerception<T, T2>::FindBoundingBox(
 	std::cout << pt_min << std::endl;
 	std::cout << pt_max << std::endl; 
 
-	*top_left_corner = Eigen::Vector3f(pt_max.x,pt_max.y,pt_max.z);
-	*lower_right_corner = Eigen::Vector3f(pt_min.x,pt_min.y,pt_min.z);
-	*center = Eigen::Vector3f(mid_pt(0),mid_pt(1),mid_pt(2));
+	*top_corner = Eigen::Vector3f(pt_max.x,pt_max.y,pt_max.z);
+	*lower_corner = Eigen::Vector3f(pt_min.x,pt_min.y,pt_min.z);
+	//*center = Eigen::Vector3f(mid_pt(0),mid_pt(1),mid_pt(2));
+	*center = (*top_corner + *lower_corner) / 2.0;
+}
+
+template <typename T, typename T2>
+void PointCloudPerception<T, T2>::FindBoundingBox(
+		const boost::shared_ptr<pcl::PointCloud<T2>> cloud,
+		Eigen::Vector3f* center, Eigen::Vector3f* top_corner, 
+		Eigen::Vector3f* lower_corner, Eigen::Matrix3f* orientation,
+		double cover_ratio) {
+	int num_pts = cloud->size();
+	double left_scale = 0;
+	double right_scale = 1.0;
+	double eps_diff = 1e-4;
+	// Eigen uses 4f for its interface.
+	Eigen::Vector4f min_pt, max_pt;
+	Eigen::Vector4f mid_pt;
+	std::vector<int> remaining_index;
+	SelectNearCentroidPoints(cloud, &remaining_index, cover_ratio);
+
+	pcl::compute3DCentroid(*cloud, remaining_index, mid_pt);
+	pcl::PCA<T2> pca;
+	pca.setInputCloud(cloud);
+	Eigen::Matrix3f eigen_vectors = pca.getEigenVectors();
+	*orientation = eigen_vectors;
+	eigen_vectors.col(2) = eigen_vectors.col(0).cross(eigen_vectors.col(1));
+
+	std::cout << "PCAs:" << std::endl;
+	std::cout << eigen_vectors << std::endl;
+	boost::shared_ptr<pcl::PointCloud<T2>> cloud_projected (new pcl::PointCloud<T2>); 
+	pca.project(*cloud, *cloud_projected);
+
+	pcl::getMinMax3D(*cloud_projected, remaining_index, min_pt, max_pt);
+	T2 pt_projected_min;
+	T2 pt_projected_max;
+	pt_projected_min.x = min_pt(0);
+	pt_projected_min.y = min_pt(1);
+	pt_projected_min.z = min_pt(2);
+	pt_projected_max.x = max_pt(0);
+	pt_projected_max.y = max_pt(1);
+	pt_projected_max.z = max_pt(2);
+
+	std::cout << pt_projected_min << std::endl;
+	std::cout << pt_projected_max << std::endl;
+	std::cout << "----------------" << std::endl;
+	T2 pt_min, pt_max;
+	pca.reconstruct(pt_projected_min, pt_min);
+	pca.reconstruct(pt_projected_max, pt_max);
+	std::cout << pt_min << std::endl;
+	std::cout << pt_max << std::endl; 
+
+	*top_corner = Eigen::Vector3f(pt_max.x,pt_max.y,pt_max.z);
+	*lower_corner = Eigen::Vector3f(pt_min.x,pt_min.y,pt_min.z);
+	//*center = Eigen::Vector3f(mid_pt(0),mid_pt(1),mid_pt(2));
+	*center = (*top_corner + *lower_corner) / 2.0;
 
 }
    

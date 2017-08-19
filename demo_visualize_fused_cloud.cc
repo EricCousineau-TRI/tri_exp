@@ -57,8 +57,10 @@ int main(int argc, char** argv) {
 	
 	Eigen::Vector3f top_left_corner, lower_right_corner;
 	Eigen::Vector3f center;
+	Eigen::Matrix3f orientation;
 	double coverage_ratio = atof(argv[2]);
-	test.FindBoundingBox(cloud, &center, &top_left_corner, &lower_right_corner, coverage_ratio);
+	test.FindBoundingBox(cloud, &center, &top_left_corner, &lower_right_corner, 
+		&orientation, coverage_ratio);
 	std::cout << top_left_corner << std::endl;
 	std::cout << lower_right_corner << std::endl;
 	std::cout << center << std::endl;
