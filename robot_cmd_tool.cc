@@ -23,6 +23,11 @@ const Eigen::Isometry3d tf_hand_to_ee(
     Eigen::AngleAxis<double>(-22. / 180. * M_PI, Eigen::Vector3d::UnitZ()) *
     Eigen::AngleAxis<double>(M_PI, Eigen::Vector3d::UnitY()));
 
+const std::string kPath =
+    "/home/user/drake_siyuan/drake/manipulation/models/iiwa_description/urdf/"
+    "iiwa14_polytope_collision.urdf";
+
+
 std::vector<std::string> split(const std::string &s, char delim) {
     std::vector<std::string> elems;
     //split(s, delim, std::back_inserter(elems));
@@ -55,11 +60,6 @@ void InitializeKeyBoardMapping()
   s_mapStringValues["Close"] = evClose;
   s_mapStringValues["Open"] = evOpen; 
 }
-
-
-const std::string kPath =
-    "/home/user/drake_siyuan/drake/manipulation/models/iiwa_description/urdf/"
-    "iiwa14_polytope_collision.urdf";
 
 // Command line control of robot for rapid prototyping of robot experiments.
 class CmdRobot {

@@ -123,7 +123,6 @@ void HandEye::ScanNew(OpenNiComm& camera_interface,
 	  perception_proc.OutlierRemoval(cloud);
 	  //perception_proc.DownSample(cloud, 0.00001);
 		Eigen::Vector3f min_range;
-
 		min_range << 0.4, -0.45, -0.2;
 		Eigen::Vector3f max_range;
 		max_range << 0.9, 0.45, 0.5;
