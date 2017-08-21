@@ -64,7 +64,7 @@ target_link_libraries(test_hand_eye lib_perception drake::drake ${PCL_LIBRARIES}
 add_executable (robot_cmd_tool robot_cmd_tool.cc)
 target_link_libraries(robot_cmd_tool drake::drake lib_perception)
 
-add_executable (book_pulling book_pulling.cc)
+add_executable (book_pulling book_pulling.cc robot_comm.cc)
 target_link_libraries(book_pulling drake::drake lib_perception)
 
 add_executable (calibration_hand_eye calibration_hand_eye.cc openni_comm.cc)

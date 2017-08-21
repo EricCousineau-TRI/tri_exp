@@ -344,7 +344,7 @@ void PointCloudPerception<T, T2>::FindBoundingBox(
 	pca.setInputCloud(cloud);
 	Eigen::Matrix3f eigen_vectors = pca.getEigenVectors();
 	*orientation = eigen_vectors;
-	eigen_vectors.col(3) = eigen_vectors.col(1).cross(eigen_vectors.col(2));
+	eigen_vectors.col(2) = eigen_vectors.col(0).cross(eigen_vectors.col(1));
 
 	std::cout << "PCAs:" << std::endl;
 	std::cout << eigen_vectors << std::endl;
