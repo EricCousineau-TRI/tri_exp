@@ -73,75 +73,105 @@ int main() {
   std::cout << "Orientation: " << orientation << std::endl;
   std::cout << "Yaw angle: " << yaw_angle_radian * 180 / M_PI << std::endl;
 
+  Eigen::VectorXd joint_buffer_above(7);
+  joint_buffer_above << 1.75373,11.7494,-2.09317,-86.2383,0.42104,82.5027,21.6225;
+  robot_comm.MoveToJointPositionDegrees(joint_buffer_above, duration);
+
   double z_above = 0.05;
   Eigen::Isometry3d pose_approach = Eigen::Isometry3d::Identity();
   pose_approach.linear() = pose_approach.linear() 
   	* Eigen::AngleAxis<double>(yaw_angle_radian, Eigen::Vector3d::UnitZ());
   pose_approach.translation() = center.cast<double>();
   pose_approach.translation()(2) += z_above; 
-  robot_comm.MoveToCartesianPose(pose_approach, 5.0);
+  robot_comm.MoveToCartesianPose(pose_approach, 2.0);
 
   // Move down.
   double z_penetration = 0.01;
   Eigen::Isometry3d pose_contact = pose_approach;
   pose_contact.translation() = center.cast<double>();
   pose_contact.translation()(2) += - z_penetration;
-  robot_comm.MoveToCartesianPose(pose_contact, 2.5, 0, 0);
+  robot_comm.MoveToCartesianPose(pose_contact, 2.0, 0, 0);
 
   // Twist to align with base frame.
   Eigen::Isometry3d pose_contact_align = Eigen::Isometry3d::Identity();
   pose_contact_align.translation() = center.cast<double>();
   pose_contact_align.translation()(2) += - z_penetration;
   
-  robot_comm.MoveToCartesianPose(pose_contact_align, 6.0, 60, 0);
+  robot_comm.MoveToCartesianPose(pose_contact_align, 3.0, 60, 0);
 
-  // Move Up. 
+  double push_dist = 0.08;
+  double lift_up_duration = 1.0;
+  double move_down_duration = 1.4;
+  double up_in_air_duration = 1.0;
+  double push_align_duration = 1.0;
+  // // Move Up. 
   Eigen::Isometry3d pose_push = pose_contact_align;
-  pose_push.translation()(2) += 0.2;
-  robot_comm.MoveToCartesianPose(pose_push, 2.0);
-  // Move to one edge 
-  pose_push.translation()(0) += 0.15;
-  pose_push.linear() = Eigen::Matrix3d::Identity();
-  robot_comm.MoveToCartesianPose(pose_push, 2.0);
-  //Move down. 
-  pose_push.translation()(2) = center(2) - 0.02;
-  robot_comm.MoveToCartesianPose(pose_push, 2.0);
-  // Move towards the book.
-  pose_push.translation()(0) -= 0.175;
-  robot_comm.MoveToCartesianPose(pose_push, 2.0);
-  // Orthogonal push.
-  // Move up. 
-  pose_push.translation()(2) += 0.2;
-  double dist_back_off = 0.05;
-  pose_push.translation()(0) += dist_back_off;
-  robot_comm.MoveToCartesianPose(pose_push, 2.0);
-  pose_push.linear() = pose_push.linear() *  
-  		Eigen::AngleAxis<double>(M_PI / 2.0, Eigen::Vector3d::UnitZ());
-  pose_push.translation()(0) -= (height_book / 2.0 + half_finger_thickness + dist_back_off);
-  pose_push.translation()(1) -= 0.15;
-  robot_comm.MoveToCartesianPose(pose_push, 2.0);
-  // Move Down.
-  pose_push.translation()(2) = center(2) - 0.02;
-  robot_comm.MoveToCartesianPose(pose_push, 2.0);
-  // Move towards the book.
-  pose_push.translation()(1) += 0.175; 
-  robot_comm.MoveToCartesianPose(pose_push, 2.0);
+  // pose_push.translation()(2) += 0.2;
+  // robot_comm.MoveToCartesianPose(pose_push, lift_up_duration);
+  // // Move to one edge 
+  // pose_push.translation()(0) -= 0.15;
+  // pose_push.linear() = Eigen::Matrix3d::Identity();
+  // robot_comm.MoveToCartesianPose(pose_push, up_in_air_duration);
+  // //Move down. 
+  // pose_push.translation()(2) = center(2) - 0.02;
+  // robot_comm.MoveToCartesianPose(pose_push, move_down_duration);
+  // // Move towards/away from the book.
+  // pose_push.translation()(0) += push_dist;
+  // robot_comm.MoveToCartesianPose(pose_push, push_align_duration);
+  // // Orthogonal push.
+  // // Move up. 
+  // pose_push.translation()(2) += 0.2;
+  // double dist_back_off = 0.05;
+  // pose_push.translation()(0) -= dist_back_off;
+  // robot_comm.MoveToCartesianPose(pose_push, lift_up_duration);
+  // pose_push.linear() = pose_push.linear() *  
+  // 		Eigen::AngleAxis<double>(M_PI / 2.0, Eigen::Vector3d::UnitZ());
+  // pose_push.translation()(0) += (height_book / 2.0 + half_finger_thickness + dist_back_off);
+  // pose_push.translation()(1) -= 0.15;
+  // robot_comm.MoveToCartesianPose(pose_push, up_in_air_duration + 0.5);
+  // // Move Down.
+  // pose_push.translation()(2) = center(2) - 0.02;
+  // robot_comm.MoveToCartesianPose(pose_push, move_down_duration);
+  // // Move towards the book.
+  // pose_push.translation()(1) += push_dist; 
+  // robot_comm.MoveToCartesianPose(pose_push, push_align_duration);
   // Now the book should be exactly localized. 
+  // pose_push.translation()(2) += 0.2;
+  // robot_comm.MoveToCartesianPose(pose_push, lift_up_duration);
+  // pose_push.translation()(1) += (width_book / 2.0 + half_finger_thickness);
+  // pose_push.translation()(2) = (center(2) - z_penetration);
+  // robot_comm.MoveToCartesianPose(pose_push, move_down_duration);
+ 
+  //----------------------------- Single Push. 
+  pose_push.translation()(2) += 0.15;
+  robot_comm.MoveToCartesianPose(pose_push, lift_up_duration);
+  pose_push.translation()(1) -= (width_book / 2.0 + half_finger_thickness + 0.02);
+  pose_push.linear() = pose_push.linear() *  
+ 		Eigen::AngleAxis<double>(M_PI / 2.0, Eigen::Vector3d::UnitZ());
+  robot_comm.MoveToCartesianPose(pose_push, up_in_air_duration);
+  pose_push.translation()(2) = center(2) - 0.02;
+  robot_comm.MoveToCartesianPose(pose_push, move_down_duration);
+  pose_push.translation()(1) += 0.05;
+  robot_comm.MoveToCartesianPose(pose_push, push_align_duration);
+
+ 	// Now the book should be exactly localized. 
   pose_push.translation()(2) += 0.2;
-  robot_comm.MoveToCartesianPose(pose_push, 2.0);
+  robot_comm.MoveToCartesianPose(pose_push, lift_up_duration);
   pose_push.translation()(1) += (width_book / 2.0 + half_finger_thickness);
   pose_push.translation()(2) = (center(2) - z_penetration);
-  robot_comm.MoveToCartesianPose(pose_push, 2.0);
-  
+  robot_comm.MoveToCartesianPose(pose_push, move_down_duration); 
 
   // Move to fixed pose at the edge of the table.
   double edge_x = 0.48;
-  double edge_y = 0.375;
+  double edge_y = 0.345;
+  //double edge_y = 0.365;
+  //double edge_y = 0.345 - (width_book/2 + half_finger_thickness);
   //Eigen::Isometry3d pose_table_edge = pose_contact_align;
   Eigen::Isometry3d pose_table_edge = pose_push;
+  //Eigen::Isometry3d pose_table_edge = pose_contact_align;
   pose_table_edge.translation()(0) = edge_x;
   pose_table_edge.translation()(1) = edge_y;
-  robot_comm.MoveToCartesianPose(pose_table_edge, 5.0, 40, 0);
+  robot_comm.MoveToCartesianPose(pose_table_edge, 4.0, 40, 0);
 
   // Leave contact.
   Eigen::Isometry3d pose_table_edge_above = pose_table_edge;
@@ -149,7 +179,9 @@ int main() {
   pose_table_edge_above.translation()(2) += 0.15;
   robot_comm.MoveToCartesianPose(pose_table_edge_above, 1.0);
   
-  double further_away_y = 0.0325;
+  double further_away_y = 0.055;
+  //double further_away_y = 0.05;
+  //double further_away_y = 0.05 + (width_book/2 + half_finger_thickness);
   pose_table_edge_above.linear() = Eigen::Matrix3d::Identity();
   pose_table_edge_above.translation()(1) += further_away_y;
   robot_comm.MoveToCartesianPose(pose_table_edge_above, 2.0);
@@ -161,7 +193,7 @@ int main() {
   pose_table_edge_pregrasp.linear() =  pose_table_edge_pregrasp.linear() * 
   		Eigen::AngleAxis<double>(roll_angle_radian, Eigen::Vector3d::UnitX());
   pose_table_edge_pregrasp.translation()(2) = z_grasp_height;
-  robot_comm.MoveToCartesianPose(pose_table_edge_pregrasp, 3.0);
+  robot_comm.MoveToCartesianPose(pose_table_edge_pregrasp, 2.0);
   // Closes gripper.
   robot_comm.CloseGripper();
 

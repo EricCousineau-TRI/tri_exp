@@ -67,6 +67,10 @@ target_link_libraries(robot_cmd_tool drake::drake lib_perception)
 add_executable (book_pulling book_pulling.cc robot_comm.cc)
 target_link_libraries(book_pulling drake::drake lib_perception)
 
+add_executable (single_object_grasping single_object_grasping_test.cc robot_comm.cc)
+target_link_libraries(single_object_grasping drake::drake lib_perception)
+
+
 add_executable (calibration_hand_eye calibration_hand_eye.cc openni_comm.cc)
 target_link_libraries(calibration_hand_eye ${PCL_LIBRARIES} ${OpenCV_LIBS} apriltags drake::drake)
 
