@@ -7,7 +7,7 @@
 
 template <typename T, typename T2>
 void PointCloudPerception<T, T2>::LoadPCDFile(std::string file_name,
-	boost::shared_ptr<pcl::PointCloud<T>> cloud) {
+		boost::shared_ptr<pcl::PointCloud<T>> cloud) {
   pcl::PCDReader reader;
   reader.read<T>(file_name, *cloud);
   std::vector<int> indices;
@@ -17,7 +17,7 @@ void PointCloudPerception<T, T2>::LoadPCDFile(std::string file_name,
 
 template <typename T, typename T2>
 void PointCloudPerception<T, T2>::LoadPCDFile(std::string file_name,
-	boost::shared_ptr<pcl::PointCloud<T2>> cloud) {
+		boost::shared_ptr<pcl::PointCloud<T2>> cloud) {
   pcl::PCDReader reader;
   reader.read<T2>(file_name, *cloud);
   std::vector<int> indices;
@@ -27,7 +27,7 @@ void PointCloudPerception<T, T2>::LoadPCDFile(std::string file_name,
 
 template <typename T, typename T2>
 void PointCloudPerception<T, T2>::DownSample(boost::shared_ptr<pcl::PointCloud<T>> cloud,
-																			double leaf_size) {
+		double leaf_size) {
 	std::cout << "Number of points before down sampling" << cloud->size() << std::endl;
 	pcl::VoxelGrid<T> grid;
 	grid.setLeafSize(leaf_size, leaf_size, leaf_size);

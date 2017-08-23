@@ -26,9 +26,15 @@ int main() {
 	RobotComm robot_comm(tree, hand_frame);
 
 	Eigen::Isometry3d tf_camera_wrt_ee;
-  tf_camera_wrt_ee.matrix() << 
-    0.3994,   -0.9168,   -0.0015,   -0.0446,
-    0.9163,    0.3992,   -0.0317,    0.0011,
+  // tf_camera_wrt_ee.matrix() << 
+  //   0.3994,   -0.9168,   -0.0015,   -0.0446,
+  //   0.9163,    0.3992,   -0.0317,    0.0011,
+  //   0.0297,    0.0113,    0.9995,    0.1121,
+  //        0,         0,         0,    1.0000;
+
+   tf_camera_wrt_ee.matrix() << 
+    0.3994,   -0.9168,   -0.0015,   -0.0646,
+    0.9163,    0.3992,   -0.0317,    0.00111,
     0.0297,    0.0113,    0.9995,    0.1121,
          0,         0,         0,    1.0000;
 
@@ -38,7 +44,7 @@ int main() {
 
  	Eigen::VectorXd joint_target_up(7);
   joint_target_up << -49.9, -35.1 , 4.9, -86.3, 22.6, 113.0, 6.1;
-  double duration = 2.0;
+  double duration = 1.5;
   robot_comm.MoveToJointPositionDegrees(joint_target_up, duration);
 
   OpenNiComm camera_interface;
@@ -51,11 +57,12 @@ int main() {
 	Eigen::Affine3f camera_pose;
 	camera_pose.matrix() = camera_pose_iso.matrix().cast<float>();
 	perception_proc.ApplyTransformToPointCloud(camera_pose, cloud);
-
+	perception_proc.VisualizePointCloudDrake(cloud);
+	//cin.get();
 	Eigen::Vector3f min_range;
-	min_range << 0.4, -0.5, -0.2;
+	min_range << 0.4, -0.5, -0.05;
 	Eigen::Vector3f max_range;
-	max_range << 0.95, 0.5, 0.5;
+	max_range << 0.95, 0.5, 0.3;
 	perception_proc.CutWithWorkSpaceConstraints(cloud, min_range, max_range);
 	// Get rid of the table.
   double thickness = 0.01;
@@ -83,27 +90,27 @@ int main() {
   	* Eigen::AngleAxis<double>(yaw_angle_radian, Eigen::Vector3d::UnitZ());
   pose_approach.translation() = center.cast<double>();
   pose_approach.translation()(2) += z_above; 
-  robot_comm.MoveToCartesianPose(pose_approach, 2.0);
+  robot_comm.MoveToCartesianPose(pose_approach, 1.5);
 
   // Move down.
   double z_penetration = 0.01;
   Eigen::Isometry3d pose_contact = pose_approach;
   pose_contact.translation() = center.cast<double>();
   pose_contact.translation()(2) += - z_penetration;
-  robot_comm.MoveToCartesianPose(pose_contact, 2.0, 0, 0);
+  robot_comm.MoveToCartesianPose(pose_contact, 1.0, 0, 0);
 
   // Twist to align with base frame.
   Eigen::Isometry3d pose_contact_align = Eigen::Isometry3d::Identity();
   pose_contact_align.translation() = center.cast<double>();
   pose_contact_align.translation()(2) += - z_penetration;
   
-  robot_comm.MoveToCartesianPose(pose_contact_align, 3.0, 60, 0);
+  robot_comm.MoveToCartesianPose(pose_contact_align, 3.5, 50, 0);
 
-  double push_dist = 0.08;
+  double push_dist = 0.075;
   double lift_up_duration = 1.0;
   double move_down_duration = 1.4;
-  double up_in_air_duration = 1.0;
-  double push_align_duration = 1.0;
+  double up_in_air_duration = 1.5;
+  double push_align_duration = 1.5;
   // // Move Up. 
   Eigen::Isometry3d pose_push = pose_contact_align;
   // pose_push.translation()(2) += 0.2;
@@ -143,27 +150,28 @@ int main() {
   // robot_comm.MoveToCartesianPose(pose_push, move_down_duration);
  
   //----------------------------- Single Push. 
-  pose_push.translation()(2) += 0.15;
-  robot_comm.MoveToCartesianPose(pose_push, lift_up_duration);
-  pose_push.translation()(1) -= (width_book / 2.0 + half_finger_thickness + 0.02);
-  pose_push.linear() = pose_push.linear() *  
- 		Eigen::AngleAxis<double>(M_PI / 2.0, Eigen::Vector3d::UnitZ());
-  robot_comm.MoveToCartesianPose(pose_push, up_in_air_duration);
-  pose_push.translation()(2) = center(2) - 0.02;
-  robot_comm.MoveToCartesianPose(pose_push, move_down_duration);
-  pose_push.translation()(1) += 0.05;
-  robot_comm.MoveToCartesianPose(pose_push, push_align_duration);
+  // pose_push.translation()(2) += 0.15;
+  // robot_comm.MoveToCartesianPose(pose_push, lift_up_duration);
+  // pose_push.translation()(1) -= (width_book / 2.0 + half_finger_thickness + 0.05);
+  // pose_push.linear() = pose_push.linear() *  
+ 	// 	Eigen::AngleAxis<double>(M_PI / 2.0, Eigen::Vector3d::UnitZ());
+  // robot_comm.MoveToCartesianPose(pose_push, up_in_air_duration);
+  // pose_push.translation()(2) = center(2) - 0.02;
+  // robot_comm.MoveToCartesianPose(pose_push, move_down_duration);
+  // pose_push.translation()(1) += push_dist;
+  // robot_comm.MoveToCartesianPose(pose_push, push_align_duration);
 
- 	// Now the book should be exactly localized. 
-  pose_push.translation()(2) += 0.2;
-  robot_comm.MoveToCartesianPose(pose_push, lift_up_duration);
-  pose_push.translation()(1) += (width_book / 2.0 + half_finger_thickness);
-  pose_push.translation()(2) = (center(2) - z_penetration);
-  robot_comm.MoveToCartesianPose(pose_push, move_down_duration); 
+ 	// // Now the book should be exactly localized. 
+  // pose_push.translation()(2) += 0.2;
+  // robot_comm.MoveToCartesianPose(pose_push, lift_up_duration);
+  // pose_push.translation()(1) += (width_book / 2.0 + half_finger_thickness);
+  // pose_push.translation()(2) = (center(2) - z_penetration);
+  // robot_comm.MoveToCartesianPose(pose_push, move_down_duration); 
 
   // Move to fixed pose at the edge of the table.
   double edge_x = 0.48;
-  double edge_y = 0.345;
+  //double edge_y = 0.345;
+  double edge_y = 0.315;
   //double edge_y = 0.365;
   //double edge_y = 0.345 - (width_book/2 + half_finger_thickness);
   //Eigen::Isometry3d pose_table_edge = pose_contact_align;
@@ -173,13 +181,26 @@ int main() {
   pose_table_edge.translation()(1) = edge_y;
   robot_comm.MoveToCartesianPose(pose_table_edge, 4.0, 40, 0);
 
+	pose_table_edge.translation()(2) += 0.15;
+  robot_comm.MoveToCartesianPose(pose_table_edge, lift_up_duration);
+  pose_table_edge.translation()(1) -= (width_book / 2.0 + half_finger_thickness + 0.06);
+  pose_table_edge.linear() = pose_table_edge.linear() * 
+  		Eigen::AngleAxis<double>(M_PI / 2.0, Eigen::Vector3d::UnitZ());
+  robot_comm.MoveToCartesianPose(pose_table_edge, up_in_air_duration);
+  pose_table_edge.translation()(2) = center(2) - 0.02;
+  robot_comm.MoveToCartesianPose(pose_table_edge, move_down_duration);
+  double push_final_location = 0.235;
+  pose_table_edge.translation()(1) = push_final_location;
+  robot_comm.MoveToCartesianPose(pose_table_edge, push_align_duration);
+
   // Leave contact.
   Eigen::Isometry3d pose_table_edge_above = pose_table_edge;
   //pose_table_edge_above.translation()(1) += further_away_y;
   pose_table_edge_above.translation()(2) += 0.15;
   robot_comm.MoveToCartesianPose(pose_table_edge_above, 1.0);
   
-  double further_away_y = 0.055;
+  //double further_away_y = 0.055;
+  double further_away_y = 0.155;
   //double further_away_y = 0.05;
   //double further_away_y = 0.05 + (width_book/2 + half_finger_thickness);
   pose_table_edge_above.linear() = Eigen::Matrix3d::Identity();

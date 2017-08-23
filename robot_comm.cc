@@ -8,7 +8,8 @@ RobotComm::RobotComm(const RigidBodyTree<double>& tree,
 }
 
 // "MoveQ". Linear movement in joint space.
-void RobotComm::MoveToJointPositionDegrees(const Eigen::VectorXd & q, double duration) {
+void RobotComm::MoveToJointPositionDegrees(const Eigen::VectorXd & q, double duration, 
+		bool flag_blocking) {
 	if ( q.size() != 7 ) {
 		std::cout << "Not 7 number" << std::endl;
 		return;
@@ -22,10 +23,13 @@ void RobotComm::MoveToJointPositionDegrees(const Eigen::VectorXd & q, double dur
 	Eigen::VectorXd q_radian = q / 180.0 * M_PI;
 	duration = std::max(0.5, duration);
 	robot_controller_.MoveJ(q_radian, duration);
-	WaitUntilControlAckDone();
+	if (flag_blocking) {
+		WaitUntilControlAckDone();
+	}
 }
 
-void RobotComm::MoveToJointPositionRadians(const Eigen::VectorXd & q, double duration) {
+void RobotComm::MoveToJointPositionRadians(const Eigen::VectorXd & q, double duration, 
+		bool flag_blocking) {
 	if ( q.size() != 7 ) {
 		std::cout << "Not 7 number" << std::endl;
 		return;
@@ -38,7 +42,9 @@ void RobotComm::MoveToJointPositionRadians(const Eigen::VectorXd & q, double dur
 	}
 	duration = std::max(0.5, duration);
 	robot_controller_.MoveJ(q, duration);
-	WaitUntilControlAckDone();
+	if (flag_blocking) {
+		WaitUntilControlAckDone();
+	}
 }
 
 // "GetQ". Get joint position and print on terminal.

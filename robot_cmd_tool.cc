@@ -17,6 +17,7 @@
 #include "drake/manipulation/util/trajectory_utils.h"
 #include "openni_comm.h"
 #include "perception.h"
+#include "robot_comm.h"
 
 const Eigen::Isometry3d tf_hand_to_ee(
     Eigen::Translation<double, 3>(Eigen::Vector3d(0, 0, 0.2384)) *
@@ -196,7 +197,7 @@ void Run() {
   }
 
 	//CmdRobot cmd_robot(tree, camera_frame);
-	CmdRobot cmd_robot(tree, tool_frame);
+	RobotComm cmd_robot(tree, tool_frame);
 	InitializeKeyBoardMapping();
 	//OpenNiComm camera_interface;
 	Eigen::Affine3f tf;
@@ -224,7 +225,7 @@ void Run() {
 				break;
 			
 			case evGetC:
-				tf2 = cmd_robot.GetCartesianPosition();				
+				tf2 = cmd_robot.GetCartesianPose();				
 				// camera_interface.GetCurrentPointCloud(cloud);				
 				// tf.matrix() = tf2.matrix().cast<float>();
 				// test.ApplyTransformToPointCloud(tf, cloud);
@@ -240,7 +241,8 @@ void Run() {
 					}
 					double duration = atof(elems[elems.size() - 1].c_str());
 					//std::cout << q_cmd.transpose() << std::endl;
-					cmd_robot.MoveToJointPosition(q_cmd, duration);
+					bool flag_blocking = true;
+					cmd_robot.MoveToJointPositionDegrees(q_cmd, duration, flag_blocking);
 				} else {
 					std::cout << "wrong number of arguments. 7 dof + time" << std::endl;
 				}
@@ -269,7 +271,7 @@ void Run() {
 					tgt_pose.linear() = M_rot.cast<double>();
 					std::cout << tgt_pose.matrix() << std::endl;
 					tgt_pose.translation() = pose_cmd.head(3);
-					cmd_robot.MoveToCartesianPosition(tgt_pose, duration, fz, mu);
+					cmd_robot.MoveToCartesianPose(tgt_pose, duration, fz, mu);
 
 				} else {
 					std::cout << "wrong number of arguments. xyzrpy + time + fz(optional) + mu(optional)" 

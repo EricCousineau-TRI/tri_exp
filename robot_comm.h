@@ -22,9 +22,11 @@ class RobotComm {
 	void SetToolTransform(Eigen::Isometry3d tf){};
 
 	// "MoveQ". Linear movement in joint space.
-	void MoveToJointPositionDegrees(const Eigen::VectorXd & q, double duration);
+	void MoveToJointPositionDegrees(const Eigen::VectorXd & q, double duration,
+			bool flag_blocking = true);
 
-	void MoveToJointPositionRadians(const Eigen::VectorXd & q, double duration);
+	void MoveToJointPositionRadians(const Eigen::VectorXd & q, double duration, 
+			bool flag_blocking = true);
 
 	// "GetQ". Get joint position and print on terminal.
 	Eigen::VectorXd GetJointPosition();

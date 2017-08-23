@@ -4,29 +4,41 @@ project(openni_grabber)
 
 set(drake_DIR "/home/user/drake_bazel_build/lib/cmake/drake")
 #list(APPEND CMAKE_MODULE_PATH "/home/user/opencv/build/")
-set(CMAKE_MODULE_PATH "/home/user/drake_bazel_build;/home/user/opencv/build/;${CMAKE_MODULE_PATH}")
+set(CMAKE_MODULE_PATH "/home/user/drake_bazel_build:/home/user/opencv/build/:/home/user/ElasticFusion/deps/Pangolin/build:${CMAKE_MODULE_PATH}")
+list (APPEND CMAKE_MODULE_PATH "/home/user/ElasticFusion/GUI/src")
 
 MESSAGE(STATUS "CMAKE MODULE PATH" ${CMAKE_MODULE_PATH})
 find_package(PCL 1.8 REQUIRED)
 #find_package(OpenCV 2.4 REQUIRED)
 find_package(OpenCV 2.4.8 EXACT REQUIRED)
+find_package(CUDA REQUIRED)
 #find_package(OpenCV 3.3.0 EXACT REQUIRED PATHS /home/user/opencv/build)
 find_package(drake REQUIRED)
 find_package(lcm REQUIRED)
-
+find_package(efusion REQUIRED)
+find_package(Pangolin 0.5 REQUIRED)
+MESSAGE(STATUS "efusion_include_dir" ${EFUSION_INCLUDE_DIR})
 include_directories(
   /usr/local/include/pcl-1.8
   /usr/include/ni
   /usr/include/openni2
 /home/user/drake_bazel_build/include/eigen3
+/home/user/ElasticFusion/Core/src
+${CUDA_INCLUDE_DIRS}
+#${EFUSION_INCLUDE_DIR}
 #${PCL_INCLUDE_DIRS}
 ${DRAKE_INCLUDE_DIRS}
 ${LCM_INCLUE_DIRS}
 ${OpenCV_INCLUDE_DIRS}
 ${apriltags_INCLUDE_DIR}
 )
-link_directories(/home/user/gurobi702/linux64/lib)
-
+link_directories(
+	/home/user/gurobi702/linux64/lib
+	#${EFUSION_LIBRARY}
+#	/home/user/ElasticFusion
+	/home/user/ElasticFusion/Core/build
+	/home/user/ElasticFusion/Core/src/build
+)
 message("DRAKE: ${DRAKE_INCLUDE_DIRS}")
 message("LCM: ${LCM_INCLUDE_DIRS}")
 
@@ -49,8 +61,8 @@ MESSAGE(STATUS "OpenCV_INCLUDE_DIR" ${OpenCV_INCLUDE_DIRS})
 #target_link_libraries (test_openni_comm ${OpenCV_LIBS} ${PCL_LIBRARIES})
 
 
-add_library(lib_perception perception.cc point_cloud_registration.cc openni_comm.cc)
-target_link_libraries(lib_perception ${PCL_LIBRARIES} ${OpenCV_LIBS} drake::drake drake::drake-lcmtypes-cpp)
+add_library(lib_perception perception.cc point_cloud_registration.cc openni_comm.cc efusion_interface.cc)
+target_link_libraries(lib_perception ${PCL_LIBRARIES} ${OpenCV_LIBS} drake::drake drake::drake-lcmtypes-cpp libefusion.so)
 
 add_executable (demo_visualize demo_visualize_fused_cloud.cc)
 target_link_libraries (demo_visualize ${PCL_LIBRARIES} ${OpenCV_LIBS} lib_perception )
@@ -61,7 +73,7 @@ target_link_libraries (demo_check_calibration lib_perception)
 add_executable (test_hand_eye hand_eye.cc)
 target_link_libraries(test_hand_eye lib_perception drake::drake ${PCL_LIBRARIES} ${OpenCV_LIBS})
 
-add_executable (robot_cmd_tool robot_cmd_tool.cc)
+add_executable (robot_cmd_tool robot_cmd_tool.cc robot_comm.cc)
 target_link_libraries(robot_cmd_tool drake::drake lib_perception)
 
 add_executable (book_pulling book_pulling.cc robot_comm.cc)
