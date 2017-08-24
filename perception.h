@@ -73,6 +73,8 @@ class PointCloudPerception {
 
     void DownSample(boost::shared_ptr<pcl::PointCloud<T>> cloud,
                     double leaf_size = 0.002);
+    void DownSample(boost::shared_ptr<pcl::PointCloud<T2>> cloud,
+                    double leaf_size = 0.002);
 
     void CutWithWorkSpaceConstraints(boost::shared_ptr<pcl::PointCloud<T>> cloud,
         const Eigen::Vector3f & min_range, const Eigen::Vector3f& max_range);

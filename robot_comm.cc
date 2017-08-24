@@ -76,13 +76,13 @@ void RobotComm::MoveToCartesianPose(const Eigen::Isometry3d& tgt_pose_ee,
 Eigen::Isometry3d RobotComm::GetCartesianPose() {
 	robot_controller_.GetIiwaState(&robot_state_);
 	Eigen::Isometry3d pose_tool = robot_state_.get_X_WT();
-	std::cout << "Robot Tool: " << std::endl;
-	std::cout << pose_tool.matrix() << std::endl;
-	std::cout << "Euler Angles: " << std::endl;
-	Eigen::Vector3d rpy = (180.0 / M_PI) * pose_tool.linear().eulerAngles(0, 1, 2); 
-	std::cout << rpy.transpose() << std::endl;
-	std::cout << "Translation: " << std::endl;
-	std::cout << pose_tool.translation().transpose() << std::endl;
+	// std::cout << "Robot Tool: " << std::endl;
+	// std::cout << pose_tool.matrix() << std::endl;
+	// std::cout << "Euler Angles: " << std::endl;
+	// Eigen::Vector3d rpy = (180.0 / M_PI) * pose_tool.linear().eulerAngles(0, 1, 2); 
+	// std::cout << rpy.transpose() << std::endl;
+	// std::cout << "Translation: " << std::endl;
+	// std::cout << pose_tool.translation().transpose() << std::endl;
 	return pose_tool;
 }
 
@@ -117,4 +117,11 @@ void RobotComm::WaitUntilControlAckDone() {
     	break;
 	}
 	return;
+}
+
+bool RobotComm::CheckWhetherControlDone() {
+	drake::jjz::PrimitiveOutput output;
+  robot_controller_.GetPrimitiveOutput(&output);
+  bool flag_done = (output.status == drake::jjz::PrimitiveOutput::DONE);
+  return flag_done;
 }

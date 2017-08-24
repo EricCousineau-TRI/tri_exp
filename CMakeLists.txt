@@ -57,12 +57,9 @@ MESSAGE(STATUS "OpenCV_INCLUDE_DIR" ${OpenCV_INCLUDE_DIRS})
 #add_executable (pcl_save_pcd pcl_save_pcd.cc)
 #target_link_libraries (pcl_save_pcd ${PCL_LIBRARIES} drake::drake)
 
-#add_executable (test_openni_comm openni_comm.cc)
-#target_link_libraries (test_openni_comm ${OpenCV_LIBS} ${PCL_LIBRARIES})
-
 
 add_library(lib_perception perception.cc point_cloud_registration.cc openni_comm.cc efusion_interface.cc)
-target_link_libraries(lib_perception ${PCL_LIBRARIES} ${OpenCV_LIBS} drake::drake drake::drake-lcmtypes-cpp libefusion.so)
+target_link_libraries(lib_perception ${PCL_LIBRARIES} ${OpenCV_LIBS} drake::drake drake::drake-lcmtypes-cpp libefusion.so ${Pangolin_LIBRARIES} ${CUDA_LIBRARIES})
 
 add_executable (demo_visualize demo_visualize_fused_cloud.cc)
 target_link_libraries (demo_visualize ${PCL_LIBRARIES} ${OpenCV_LIBS} lib_perception )
@@ -82,14 +79,11 @@ target_link_libraries(book_pulling drake::drake lib_perception)
 add_executable (single_object_grasping single_object_grasping_test.cc robot_comm.cc)
 target_link_libraries(single_object_grasping drake::drake lib_perception)
 
-
 add_executable (calibration_hand_eye calibration_hand_eye.cc openni_comm.cc)
 target_link_libraries(calibration_hand_eye ${PCL_LIBRARIES} ${OpenCV_LIBS} apriltags drake::drake)
 
+add_executable (demo_test_efusion demo_test_elastic_fusion.cc robot_comm.cc)
+target_link_libraries(demo_test_efusion lib_perception)
 
-#add_library(lib_hand_eye hand_eye.cc perception.cc point_cloud_registration.cc openni_comm.cc)
-#target_link_libraries(lib_hand_eye drake::drake ${PCL_LIBRARIES} ${OpenCV_LIBS})
 
-#add_executable (test_fusion action_scan.cc hand_eye.cc perception.cc point_cloud_registration.cc openni_comm.cc)
-#target_link_libraries(test_fusion drake::drake ${PCL_LIBRARIES} ${OpenCV_LIBS})
 

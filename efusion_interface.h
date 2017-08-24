@@ -6,10 +6,10 @@
 class EFusionInterface{
  public:	
 	EFusionInterface();
-	// Use the camera pose to boostrap elastic fusion. 
+	// Use the camera pose to bootstrap elastic fusion. 
  	void ProcFrame(const Eigen::Isometry3d camera_pose);
- 	void GetFusedPointCloud();
+ 	void GetFusedPointCloud(boost::shared_ptr<pcl::PointCloud<pcl::PointXYZRGBNormal>> cloud);
  private:
  	std::unique_ptr<ElasticFusion> efusion_;
- 	OpenNiComm camera_interface_;
+ 	std::unique_ptr<OpenNiComm> camera_interface_;
 };

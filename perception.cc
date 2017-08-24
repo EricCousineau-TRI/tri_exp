@@ -37,6 +37,17 @@ void PointCloudPerception<T, T2>::DownSample(boost::shared_ptr<pcl::PointCloud<T
 }
 
 template <typename T, typename T2>
+void PointCloudPerception<T, T2>::DownSample(boost::shared_ptr<pcl::PointCloud<T2>> cloud,
+		double leaf_size) {
+	std::cout << "Number of points before down sampling" << cloud->size() << std::endl;
+	pcl::VoxelGrid<T2> grid;
+	grid.setLeafSize(leaf_size, leaf_size, leaf_size);
+	grid.setInputCloud(cloud);
+	grid.filter(*cloud);
+	std::cout << "Number of points after down sampling" << cloud->size() << std::endl;
+}
+
+template <typename T, typename T2>
 void PointCloudPerception<T, T2>::FilterPointsWithEmptyNormals(
 		boost::shared_ptr<pcl::PointCloud<T2>> cloud) {
 

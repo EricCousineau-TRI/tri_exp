@@ -81,8 +81,17 @@ cv::Mat OpenNiComm::GetCurrentDepthImage() {
 	request_to_capture_depth_ = false;
 	updated_depth_ = false;
 
-	// cv::namedWindow("test depth");
-	// cv::imshow("cv_depth_image", stored_depth_image_);
+	// efusion_->processFrame(rgb_img.data, strtoul(depth_img.data, NULL, 0), t, 
+	// 		&camera_pose_prior, 1.0, flag_prior);]
+	// double min;
+	// double max;
+	// cv::minMaxIdx(depth_img, &min, &max);
+	// cv::Mat adjMap;
+	// // expand your range to 0..255. Similar to histEq();
+	// depth_img.convertTo(adjMap,CV_8UC1, 255 / (max-min), -min); 
+	// cv::Mat falseColorsMap;
+	// applyColorMap(adjMap, falseColorsMap, cv::COLORMAP_AUTUMN);
+	// cv::imshow("Out", falseColorsMap);
 	// cv::waitKey(0);
 	return stored_depth_image_;
 }

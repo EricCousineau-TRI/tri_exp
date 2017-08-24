@@ -17,9 +17,7 @@ int main() {
 	RigidBodyTree<double> tree;
   drake::parsers::urdf::AddModelInstanceFromUrdfFile(
       kPath, drake::multibody::joints::kFixed, nullptr, &tree);
-  double width_book = 0.18;
-  double height_book = 0.23;
-  double half_finger_thickness = 0.012;
+
 	RigidBodyFrame<double> hand_frame("tool", tree.FindBody(drake::jjz::kEEName),
   		tf_hand_to_ee);
 

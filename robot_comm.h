@@ -51,6 +51,8 @@ class RobotComm {
 
 	void WaitUntilControlAckDone();
 
+	bool CheckWhetherControlDone();
+
  private:
  	drake::jjz::JjzController robot_controller_;
 
