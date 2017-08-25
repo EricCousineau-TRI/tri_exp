@@ -46,7 +46,7 @@ int main() {
   joint_target_up << -49.9, -35.1 , 4.9, -86.3, 22.6, 113.0, 6.1;
   double duration = 1.5;
   robot_comm.MoveToJointPositionDegrees(joint_target_up, duration);
-
+  robot_comm.OpenGripper();
   OpenNiComm camera_interface;
 	boost::shared_ptr<pcl::PointCloud<ColoredPointT>> cloud(
 			new pcl::PointCloud<ColoredPointT>);
@@ -65,7 +65,7 @@ int main() {
 	max_range << 0.95, 0.5, 0.3;
 	perception_proc.CutWithWorkSpaceConstraints(cloud, min_range, max_range);
 	// Get rid of the table.
-  double thickness = 0.01;
+  double thickness = 0.0125;
   perception_proc.SubtractTable(cloud, thickness);
 
 	Eigen::Vector3f center, top_corner, lower_corner;
@@ -104,7 +104,7 @@ int main() {
   pose_contact_align.translation() = center.cast<double>();
   pose_contact_align.translation()(2) += - z_penetration;
   
-  robot_comm.MoveToCartesianPose(pose_contact_align, 3.5, 50, 0);
+  robot_comm.MoveToCartesianPose(pose_contact_align, 3.5, 40, 0);
 
   double push_dist = 0.075;
   double lift_up_duration = 1.0;

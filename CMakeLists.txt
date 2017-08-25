@@ -24,20 +24,21 @@ include_directories(
   /usr/include/openni2
 /home/user/drake_bazel_build/include/eigen3
 /home/user/ElasticFusion/Core/src
+/home/user/gpg/include
 ${CUDA_INCLUDE_DIRS}
-#${EFUSION_INCLUDE_DIR}
-#${PCL_INCLUDE_DIRS}
 ${DRAKE_INCLUDE_DIRS}
 ${LCM_INCLUE_DIRS}
 ${OpenCV_INCLUDE_DIRS}
 ${apriltags_INCLUDE_DIR}
+#${EFUSION_INCLUDE_DIR}
+#${PCL_INCLUDE_DIRS}
 )
 link_directories(
 	/home/user/gurobi702/linux64/lib
 	#${EFUSION_LIBRARY}
-#	/home/user/ElasticFusion
 	/home/user/ElasticFusion/Core/build
 	/home/user/ElasticFusion/Core/src/build
+	/home/user/gpg/build
 )
 message("DRAKE: ${DRAKE_INCLUDE_DIRS}")
 message("LCM: ${LCM_INCLUDE_DIRS}")
@@ -84,6 +85,11 @@ target_link_libraries(calibration_hand_eye ${PCL_LIBRARIES} ${OpenCV_LIBS} april
 
 add_executable (demo_test_efusion demo_test_elastic_fusion.cc robot_comm.cc)
 target_link_libraries(demo_test_efusion lib_perception)
+
+add_executable (demo_gpg anti_podal_grasp.cc)
+target_link_libraries(demo_gpg libgrasp_candidates_generator.so libgpg_config_file.a
+lib_perception 
+) 
 
 
 

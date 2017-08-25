@@ -23,10 +23,10 @@ EFusionInterface::EFusionInterface() {
  //                                        		covThresh,
  //                                        		!flag_openloop); 
   efusion_ = std::make_unique<ElasticFusion>();
-	efusion_->setConfidenceThreshold(5.0);
+	efusion_->setConfidenceThreshold(2.5);
 	camera_interface_ = std::make_unique<OpenNiComm>();
 	// Sleep sometime for camera to initialize connection.
-	usleep(1.0 * 1e+6);
+	usleep(0.5 * 1e+6);
 }
 
 void EFusionInterface::ProcFrame(const Eigen::Isometry3d camera_pose) {

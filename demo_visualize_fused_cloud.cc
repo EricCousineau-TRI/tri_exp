@@ -33,7 +33,7 @@ int main(int argc, char** argv) {
 						-0.539048, -0.398092, -0.762224,  0.488759,
         				0,         0,         0,         1;
 
-    test.ApplyTransformToCombinedPointCloud(tf_tmp, cloud_and_normal);
+    //test.ApplyTransformToCombinedPointCloud(tf_tmp, cloud_and_normal);
     test.VisualizePointCloudDrake(cloud_and_normal);
     std::cout << "Should have visualized" << std::endl;
 	pcl::PointIndices::Ptr inliers(new pcl::PointIndices);
@@ -41,9 +41,9 @@ int main(int argc, char** argv) {
 	test.FindPlane(cloud_and_normal, &coeffs_plane, inliers, 0.005);
 	std::cout << coeffs_plane << std::endl;
 	Eigen::Vector3f min_range;
-	min_range << 0.4, -0.3, -0.2;
+	min_range << 0.4, -0.4, -0.2;
 	Eigen::Vector3f max_range;
-	max_range << 0.9, 0.3, 0.5;
+	max_range << 0.9, 0.4, 0.5;
 	test.CutWithWorkSpaceConstraints(cloud_and_normal, min_range, max_range);
 
   	// Get rid of the table.

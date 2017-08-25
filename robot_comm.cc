@@ -100,7 +100,7 @@ void RobotComm::CloseGripper() {
 
 // "Open". Open the gripper.
 void RobotComm::OpenGripper() {
-	robot_controller_.OpenGripperAndSleep(0.5);
+	robot_controller_.OpenGripperAndSleep(0.25);
 }
 
 void RobotComm::SetGripperPositionAndForce(double position, double force) {
