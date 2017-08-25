@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 2.8 FATAL_ERROR)
 
-project(openni_grabber)
+project(grasp_all)
+SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 
 set(drake_DIR "/home/user/drake_bazel_build/lib/cmake/drake")
 #list(APPEND CMAKE_MODULE_PATH "/home/user/opencv/build/")
@@ -62,6 +63,10 @@ MESSAGE(STATUS "OpenCV_INCLUDE_DIR" ${OpenCV_INCLUDE_DIRS})
 add_library(lib_perception perception.cc point_cloud_registration.cc openni_comm.cc efusion_interface.cc)
 target_link_libraries(lib_perception ${PCL_LIBRARIES} ${OpenCV_LIBS} drake::drake drake::drake-lcmtypes-cpp libefusion.so ${Pangolin_LIBRARIES} ${CUDA_LIBRARIES})
 
+add_library (lib_gpg anti_podal_grasp.cc)
+target_link_libraries(lib_gpg libgrasp_candidates_generator.so libgpg_config_file.a  lib_perception) 
+
+
 add_executable (demo_visualize demo_visualize_fused_cloud.cc)
 target_link_libraries (demo_visualize ${PCL_LIBRARIES} ${OpenCV_LIBS} lib_perception )
 
@@ -84,12 +89,8 @@ add_executable (calibration_hand_eye calibration_hand_eye.cc openni_comm.cc)
 target_link_libraries(calibration_hand_eye ${PCL_LIBRARIES} ${OpenCV_LIBS} apriltags drake::drake)
 
 add_executable (demo_test_efusion demo_test_elastic_fusion.cc robot_comm.cc)
-target_link_libraries(demo_test_efusion lib_perception)
+target_link_libraries(demo_test_efusion lib_perception lib_gpg)
 
-add_executable (demo_gpg anti_podal_grasp.cc)
-target_link_libraries(demo_gpg libgrasp_candidates_generator.so libgpg_config_file.a
-lib_perception 
-) 
 
 
 

@@ -114,37 +114,41 @@ std::vector<AntiPodalGrasp> AntiPodalGraspPlanner::GenerateAntipodalGrasp() {
 	candidates_generator->preprocessPointCloud(*cloud_camera);
 	std::vector<Grasp> candidates = 
 			candidates_generator->generateGraspCandidates(*cloud_camera);
+	std::cout << "generated grasps to evaluate antipodalness" << std::endl;
 	std::vector<AntiPodalGrasp> antipodal_grasps;
 	for (int i = 0; i < candidates.size(); ++i) {
 		if (candidates[i].isFullAntipodal()) {
-			// 
-			Eigen::Isometry3d tf_gpg = Eigen::Isometry3d::Identity(); 
-			tf_gpg.linear() = candidates[i].getFrame();
-			//tf_gpg.translation() = candidates[i].getPosition();
-			// Rotate the frames to be aligned with our convention.
-			Eigen::Isometry3d tf_hand(Eigen::AngleAxis<double>(M_PI/2, Eigen::Vector3d::UnitY()));
-			tf_hand = tf_hand * tf_gpg;
+			// Get approach direction as negative z. 
+			Eigen::Vector3d hand_z_dir = - candidates[i].getApproach();
+			Eigen::Vector3d hand_y_dir = candidates[i].getBinormal();
+			Eigen::Vector3d hand_x_dir = hand_y_dir.cross(hand_z_dir);
+			Eigen::Matrix3d hand_frame;
+			hand_frame.col(0) = hand_x_dir;
+			hand_frame.col(1) = hand_y_dir;
+			hand_frame.col(2) = hand_z_dir;
+			Eigen::Isometry3d tf_hand = Eigen::Isometry3d::Identity();
 			tf_hand.translation() = candidates[i].getPosition();
+			tf_hand.linear() = hand_frame;
 			std::cout << tf_hand.matrix() << std::endl;
 			AntiPodalGrasp grasp;
-			grasp.hand_frame = tf_hand;
+			grasp.hand_pose = tf_hand;
 			antipodal_grasps.push_back(grasp);
 		}
 	}		
 	return antipodal_grasps;
 }
 
-int main(int argc, char** argv) {
-	assert(argc == 3);
-  std::string point_cloud_file(argv[1]);
-  std::string config_file(argv[2]);
-  pcl::PCDReader reader;
-	boost::shared_ptr<pcl::PointCloud<pcl::PointXYZRGBNormal>> cloud_and_normal(
-		new pcl::PointCloud<pcl::PointXYZRGBNormal>);
-	reader.read<pcl::PointXYZRGBNormal>(point_cloud_file, *cloud_and_normal);
-	AntiPodalGraspPlanner grasp_planner(config_file);
-	grasp_planner.SetInputCloud(cloud_and_normal);
-	grasp_planner.GenerateAntipodalGrasp();
+// int main(int argc, char** argv) {
+// 	assert(argc == 3);
+//   std::string point_cloud_file(argv[1]);
+//   std::string config_file(argv[2]);
+//   pcl::PCDReader reader;
+// 	boost::shared_ptr<pcl::PointCloud<pcl::PointXYZRGBNormal>> cloud_and_normal(
+// 		new pcl::PointCloud<pcl::PointXYZRGBNormal>);
+// 	reader.read<pcl::PointXYZRGBNormal>(point_cloud_file, *cloud_and_normal);
+// 	AntiPodalGraspPlanner grasp_planner(config_file);
+// 	grasp_planner.SetInputCloud(cloud_and_normal);
+// 	grasp_planner.GenerateAntipodalGrasp();
 
-  return 0;	
-}
+//   return 0;	
+// }

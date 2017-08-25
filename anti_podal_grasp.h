@@ -7,7 +7,7 @@
 #include <memory>
 
 struct AntiPodalGrasp {
-	Eigen::Isometry3d hand_frame;
+	Eigen::Isometry3d hand_pose;
 	double score;
 };
 // This class implements anti-podal grasp geneneration. Mostly a wrapper over
