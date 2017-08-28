@@ -52,7 +52,7 @@ void OpenNiComm::GetCurrentPointCloud(
 	//return stored_cloud_;
 }
 
-cv::Mat OpenNiComm::GetCurrentRGBImage() {
+cv::Mat OpenNiComm::GetCurrentRGBImage(bool display) {
 	std::unique_lock<std::mutex> lock(mtx_);
 	request_to_capture_rgb_ = true;
 	while (!updated_rgb_) {
@@ -63,10 +63,11 @@ cv::Mat OpenNiComm::GetCurrentRGBImage() {
 	};
 	request_to_capture_rgb_ = false;
 	updated_rgb_ = false;
-
-	// cv::namedWindow("test rgb");
-	// cv::imshow("cv_image", stored_image_);
-	// cv::waitKey(0);
+	if (display) {
+	  //cv::namedWindow("test rgb");
+	  // cv::imshow("cv_image", stored_image_);
+	  // cv::waitKey(0);
+	}
 	return stored_image_;
 }
 
@@ -113,10 +114,10 @@ void OpenNiComm::rgb_depth_image_cb_(const boost::shared_ptr<pcl::io::Image>& rg
 		// Because getData() returns const and opencv mat does not take const void*.
 		void * buffer = new char[depth_image->getDataSize()];
 		memcpy(buffer, depth_image->getData(), depth_image->getDataSize());
-  	stored_depth_image_ = cv::Mat(depth_image->getHeight(), depth_image->getWidth(),
-  			CV_16UC1, buffer, depth_image->getStep());
-  	//depth_image->fillDepthImageRaw(stored_depth_image_.cols, stored_depth_image_.rows,
-  	//	stored_depth_image_.data);
+			stored_depth_image_ = cv::Mat(depth_image->getHeight(), depth_image->getWidth(),
+				CV_16UC1, buffer, depth_image->getStep());
+		//depth_image->fillDepthImageRaw(stored_depth_image_.cols, stored_depth_image_.rows,
+		//	stored_depth_image_.data);
 		updated_depth_ = true;
 	}
 }

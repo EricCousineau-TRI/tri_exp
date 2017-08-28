@@ -88,25 +88,35 @@ Eigen::Isometry3d RobotComm::GetCartesianPose() {
 
 // "GuardedMove". Move in a certain direction until a 
 // certain amount of force is sensed.
-void RobotComm::MoveUntilTouch(){};
+void RobotComm::MoveUntilTouch(const Eigen::Vector3d & dir_W,
+                               double vel, double force_thresh){
+  robot_controller_.MoveStraightUntilTouch(dir_W, vel, force_thresh);  
+};
 
 
 // "Close". Close the gripper.
 void RobotComm::CloseGripper() {
 	//robot_controller_.CloseGripperAndSleep(0.5);
-	robot_controller_.SetGripperPositionAndForce(0, 80);
-	usleep(0.5 * 1e+6);
+	robot_controller_.SetGripperPositionAndForce(0, 60);
+	usleep(0.25 * 1e+6);
 }
 
 // "Open". Open the gripper.
 void RobotComm::OpenGripper() {
-	robot_controller_.OpenGripperAndSleep(0.25);
+	SetGripperPositionAndForce(100, 40);
+	usleep(0.25 * 1e+6);
+	//robot_controller_.OpenGripperAndSleep(0.25);
 }
 
 void RobotComm::SetGripperPositionAndForce(double position, double force) {
 	robot_controller_.SetGripperPositionAndForce(position, force);
 }
 
+double RobotComm::GetGripperFingerDistance() {
+	drake::jjz::WsgState wsg_state;
+	robot_controller_.GetWsgState(&wsg_state);
+	return wsg_state.get_position();
+}
 
 void RobotComm::WaitUntilControlAckDone() {
  	drake::jjz::PrimitiveOutput output;

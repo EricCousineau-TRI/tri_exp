@@ -219,13 +219,19 @@ void Run() {
 		Eigen::Isometry3d tgt_pose = Eigen::Isometry3d::Identity();
 		double fz;
 		double mu;
+		// Guarded move.
+		double force_z = 5.0;
+		double vel = 0.01;
+		Eigen::Vector3d g_move_dir;
+		g_move_dir << 0,0,-1;
 		switch (s_mapStringValues[elems[0]]) {
 			case evGetJ:
 				cmd_robot.GetJointPosition();
 				break;
 			
 			case evGetC:
-				tf2 = cmd_robot.GetCartesianPose();				
+				tf2 = cmd_robot.GetCartesianPose();		
+				std::cout << tf2.matrix() << std::endl;		
 				// camera_interface.GetCurrentPointCloud(cloud);				
 				// tf.matrix() = tf2.matrix().cast<float>();
 				// test.ApplyTransformToPointCloud(tf, cloud);
@@ -278,7 +284,24 @@ void Run() {
 					<< std::endl;
 				}
 				break;
-
+			case evClose:
+				cmd_robot.CloseGripper();
+				break;
+			case evOpen:
+				cmd_robot.OpenGripper();
+				break;
+			case evGuardedMove:
+				
+				assert(elems.size() <= 3);
+				if (elems.size() >= 2) {
+					force_z = atof(elems[1].c_str());
+				} 
+				if (elems.size() >=3 ) {
+					vel = atof(elems[2].c_str());
+				}
+				
+				cmd_robot.MoveUntilTouch(g_move_dir, vel, force_z);
+				break;
 			default:
 				std::cout << "illegal input command type" << std::endl;
 				break;

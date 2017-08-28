@@ -15,7 +15,7 @@ class OpenNiComm{
  public:
   OpenNiComm();
   void GetCurrentPointCloud(boost::shared_ptr<pcl::PointCloud<pcl::PointXYZRGB>>);
-  cv::Mat GetCurrentRGBImage();
+  cv::Mat GetCurrentRGBImage(bool display = false);
   cv::Mat GetCurrentDepthImage();
 
   void Stop() {

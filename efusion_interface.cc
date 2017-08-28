@@ -29,11 +29,11 @@
 // 	usleep(0.5 * 1e+6);
 // }
 
-void EFusionInterface::ProcFrame(const Eigen::Isometry3d camera_pose) {
+void EFusionInterface::ProcFrame(const Eigen::Isometry3d camera_pose, OpenNiComm& camera_interface) {
 	
-	cv::Mat rgb_img = camera_interface_->GetCurrentRGBImage();
+	cv::Mat rgb_img = camera_interface.GetCurrentRGBImage();
 	cv::cvtColor(rgb_img, rgb_img, CV_BGR2RGB);
-	cv::Mat depth_img = camera_interface_->GetCurrentDepthImage();
+	cv::Mat depth_img = camera_interface.GetCurrentDepthImage();
 	
 	Eigen::Matrix4f camera_pose_prior;
 	camera_pose_prior.matrix() = camera_pose.matrix().cast<float>();

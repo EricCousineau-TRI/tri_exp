@@ -33,14 +33,15 @@ class RobotComm {
 
 	// "MoveC". Linear movement in Cartesian space.
 	void MoveToCartesianPose(const Eigen::Isometry3d& tgt_pose_ee,
-													 double duration, double fz = 0, double mu = 0);
+							 double duration, double fz = 0, double mu = 0);
 
 	// "GetC". Get cartesian pose and print on terminal.
 	Eigen::Isometry3d GetCartesianPose();
 
 	// "GuardedMove". Move in a certain direction until a 
 	// certain amount of force is sensed.
-	void MoveUntilTouch();
+	void MoveUntilTouch(const Eigen::Vector3d & dir_W = Eigen::Vector3d(0, 0, -1),
+                        double vel = 0.01, double force_thresh = 2.0);
 
 	void SetGripperPositionAndForce(double position, double force);
 
@@ -48,6 +49,9 @@ class RobotComm {
 	void CloseGripper();
 	// "Open". Open the gripper.
 	void OpenGripper();
+
+	// Get WSG encoder distance.
+	double GetGripperFingerDistance();
 
 	void WaitUntilControlAckDone();
 

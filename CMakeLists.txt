@@ -9,6 +9,8 @@ set(CMAKE_MODULE_PATH "/home/user/drake_bazel_build:/home/user/opencv/build/:/ho
 list (APPEND CMAKE_MODULE_PATH "/home/user/ElasticFusion/GUI/src")
 
 MESSAGE(STATUS "CMAKE MODULE PATH" ${CMAKE_MODULE_PATH})
+find_package(OpenGL)
+MESSAGE(STATUS "OpenGL" ${OPENGL_FOUND})
 find_package(PCL 1.8 REQUIRED)
 #find_package(OpenCV 2.4 REQUIRED)
 find_package(OpenCV 2.4.8 EXACT REQUIRED)
@@ -31,6 +33,7 @@ ${DRAKE_INCLUDE_DIRS}
 ${LCM_INCLUE_DIRS}
 ${OpenCV_INCLUDE_DIRS}
 ${apriltags_INCLUDE_DIR}
+${OPENGL_INCLUDE_DIR}
 #${EFUSION_INCLUDE_DIR}
 #${PCL_INCLUDE_DIRS}
 )
