@@ -3,7 +3,7 @@ workspace(name = "tri_exp")
 
 local_repository(
     name = "drake",
-    path = "../drake-distro",
+    path = "externals/drake-distro",
 )
 
 
@@ -14,7 +14,7 @@ load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
 
 local_repository(
     name = "kythe",
-    path = "tools/third_party/kythe",
+    path = "externals/drake-distro/tools/third_party/kythe",
 )
 
 load("@kythe//tools/build_rules/config:pkg_config.bzl", "pkg_config_package")
