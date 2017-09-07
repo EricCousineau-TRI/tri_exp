@@ -14,7 +14,7 @@ const std::string kPath =
     "drake/manipulation/models/iiwa_description/urdf/"
     "iiwa14_polytope_collision.urdf";
 
-Isometry3d GetBookPose(pcl::PointCloud<ColoredPointT>::Ptr cloud_in) {
+Isometry3d GetBookPose(pcl::PointCloud<ColoredPointT>::ConstPtr cloud_in) {
   PointCloudPerception<ColoredPointT, ColoredPointTNormal> perception_proc;
   DrakeCameraInterface camera_interface;
 
@@ -61,12 +61,15 @@ class PerceptionImpl : public PerceptionBase {
   PerceptionImpl()
       : PerceptionBase(CameraInfo()) {
     // Use camera_info from simulation.
+    done_ = false;
     cloud_fused_.reset(new PointCloud<ColoredPointT>());
   }
 
   void Update(double time,
               const ImageDepth32F& depth_image,
               const Isometry3d& X_WD) {
+    DRAKE_ASSERT(!done_);
+
     // Fuse point cloud.
     RgbdCamera::ConvertDepthImageToPointCloud(depth_image, camera_info,
       &points_D);
@@ -94,10 +97,14 @@ class PerceptionImpl : public PerceptionBase {
   }
 
   Isometry3d EstimatePose() {
-    return GetBookPose(cloud_fused_);
+    DRAKE_ASSERT(!done_);
+    Isometry3d out = GetBookPose(cloud_fused_);
+    done_ = true;
+    return out;
   }
 
  private:
+  bool done_{};
   PointCloud<ColoredPointT>::Ptr cloud_fused_;
 };
 
