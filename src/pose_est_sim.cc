@@ -45,9 +45,9 @@ Isometry3d GetBookPose(PerceptionProc* pperception_proc,
 
   //cin.get();
   Eigen::Vector3f min_range;
-  min_range << 0.4, -0.5, -0.05;
+  min_range << 0.1, -0.9, 0.6;
   Eigen::Vector3f max_range;
-  max_range << 0.95, 0.5, 0.3;
+  max_range << 0.6, -0.2, 1;
   perception_proc.CutWithWorkSpaceConstraints(cloud, min_range, max_range);
   // Get rid of the table.
   double thickness = 0.025;
