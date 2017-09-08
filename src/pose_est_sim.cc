@@ -6,6 +6,7 @@
 #include "drake/manipulation/sensors/xtion.h"
 
 #include "drake/examples/kuka_iiwa_arm/dev/push_pick_place/perception_base.h"
+#include "drake/examples/kuka_iiwa_arm/dev/push_pick_place/push_and_pick_demo.h"
 
 using pcl::PointCloud;
 using drake::systems::sensors::RgbdCamera;
@@ -119,8 +120,10 @@ class PerceptionImpl : public PerceptionBase {
 
 using namespace tri_exp;
 
-int main() {
-  DoMain(new PerceptionImpl());
+int main(int argc, char* argv[]) {
+  gflags::ParseCommandLineFlags(&argc, &argv, true);
+  drake::logging::HandleSpdlogGflags();
 
-  return 0;
+  return drake::examples::kuka_iiwa_arm::push_and_pick::DoMain(
+      std::make_unique<PerceptionImpl>());
 }
