@@ -1,3 +1,7 @@
+#include <gflags/gflags.h>
+
+#include "drake/common/text_logging_gflags.h"
+
 #include "perception.h"
 
 #include "drake/systems/sensors/image.h"
