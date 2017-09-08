@@ -47,6 +47,7 @@ cc_binary(
     ],
     deps = [
         ":perception",
+        "@drake//drake/manipulation/sensors:xtion",
         "@drake//drake/examples/kuka_iiwa_arm/dev/push_pick_place:perception_base",
         "@drake//drake/examples/kuka_iiwa_arm/dev/push_pick_place:push_and_pick_state_machine",
     ],

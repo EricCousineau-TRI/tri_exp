@@ -3,6 +3,7 @@
 #include "drake/systems/sensors/image.h"
 #include "drake/systems/sensors/camera_info.h"
 #include "drake/systems/sensors/rgbd_camera.h"
+#include "drake/manipulation/sensors/xtion.h"
 
 #include "drake/examples/kuka_iiwa_arm/dev/push_pick_place/perception_base.h"
 
@@ -11,6 +12,7 @@ using drake::systems::sensors::RgbdCamera;
 using drake::systems::sensors::CameraInfo;
 using drake::systems::sensors::ImageDepth32F;
 using drake::examples::kuka_iiwa_arm::push_and_pick::PerceptionBase;
+using drake::manipulation::sensors::Xtion;
 
 using Eigen::Isometry3d;
 using Eigen::Matrix3Xf;
@@ -57,12 +59,13 @@ Isometry3d GetBookPose(pcl::PointCloud<ColoredPointT>::ConstPtr cloud_in) {
   X_WO.setIdentity();
   X_WO.translation() = center.cast<double>();
   X_WO.linear() << orientation.cast<double>();
+  return X_WO;
 }
 
 class PerceptionImpl : public PerceptionBase {
  public:
   PerceptionImpl()
-      : PerceptionBase(CameraInfo()) {
+      : PerceptionBase(Xtion::GetCameraIntrinsics()) {
     // Use camera_info from simulation.
     done_ = false;
     cloud_fused_.reset(new PointCloud<ColoredPointT>());
@@ -74,9 +77,10 @@ class PerceptionImpl : public PerceptionBase {
     DRAKE_ASSERT(!done_);
 
     // Fuse point cloud.
-    RgbdCamera::ConvertDepthImageToPointCloud(depth_image, camera_info,
+    Matrix3Xf points_D;
+    RgbdCamera::ConvertDepthImageToPointCloud(depth_image, camera_info(),
       &points_D);
-    Matrix3Xf points_W = X_WD * points_D;
+    Matrix3Xf points_W = X_WD.cast<float>() * points_D;
 
     pcl::PointCloud<ColoredPointT>::Ptr
         cloud_W(new pcl::PointCloud<ColoredPointT>());
@@ -85,7 +89,7 @@ class PerceptionImpl : public PerceptionBase {
 
     // int k = 0;
     for (int i = 0; i < n; ++i) {
-      auto& p = cloud_W.point[i];
+      auto& p = cloud_W->points[i];
       auto pt_W = points_W.col(i);
       p.x = pt_W[0];
       p.y = pt_W[1];
