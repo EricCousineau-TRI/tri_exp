@@ -3,6 +3,9 @@
 #include <pcl/console/time.h>
 #include <pcl/common/pca.h>
 
+// Need to incorporate implementation.
+#include <pcl/search/impl/search.hpp>
+
 #include <bot_core/pointcloud_t.hpp>
 
 template <typename T, typename T2>
