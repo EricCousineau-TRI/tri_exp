@@ -25,6 +25,7 @@ cc_library(
     ],
     deps = [
         ":pcl_stuff",
+        "@drake//drake/lcm",
         "@drake//drake/systems/sensors:image_to_lcm_image_array_t",
     ],
 )

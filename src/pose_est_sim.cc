@@ -1,12 +1,19 @@
 #include "perception.h"
 
 #include "drake/systems/sensors/image.h"
-#include "drake/systems/sensors/lcm_image_array_t_to_image.h"
+#include "drake/systems/sensors/camera_info.h"
+#include "drake/systems/sensors/rgbd_camera.h"
 
-#include "drake/examples/kuka_iiwa_arm/dev/push_and_pick/perception_base.h"
+#include "drake/examples/kuka_iiwa_arm/dev/push_pick_place/perception_base.h"
 
-using namespace drake::systems::sensors;
-using namespace drake::examples::kuka_iiwa_arm::push_and_pick;
+using pcl::PointCloud;
+using drake::systems::sensors::RgbdCamera;
+using drake::systems::sensors::CameraInfo;
+using drake::systems::sensors::ImageDepth32F;
+using drake::examples::kuka_iiwa_arm::push_and_pick::PerceptionBase;
+
+using Eigen::Isometry3d;
+using Eigen::Matrix3Xf;
 
 namespace tri_exp {
 
@@ -16,16 +23,12 @@ const std::string kPath =
 
 Isometry3d GetBookPose(pcl::PointCloud<ColoredPointT>::ConstPtr cloud_in) {
   PointCloudPerception<ColoredPointT, ColoredPointTNormal> perception_proc;
-  DrakeCameraInterface camera_interface;
 
   // Need a copy...
-  pcl::PointCloud<ColoredPointT>::Ptr cloud(cloud_in);
+  pcl::PointCloud<ColoredPointT>::Ptr cloud(new PointCloud<ColoredPointT>());
+  pcl::copyPointCloud(*cloud_in, *cloud);
 
   perception_proc.OutlierRemoval(cloud);
-
-  Eigen::Affine3f camera_pose;
-  camera_pose.matrix() = LcmPoseToPose(pose_msg).matrix().cast<float>();
-  perception_proc.ApplyTransformToPointCloud(camera_pose, cloud);
   perception_proc.VisualizePointCloudDrake(cloud);
 
   //cin.get();
@@ -52,8 +55,8 @@ Isometry3d GetBookPose(pcl::PointCloud<ColoredPointT>::ConstPtr cloud_in) {
 
   Isometry3d X_WO;
   X_WO.setIdentity();
-  X_WO.translation() = center;
-  X_WO.linear() << orientation;
+  X_WO.translation() = center.cast<double>();
+  X_WO.linear() << orientation.cast<double>();
 }
 
 class PerceptionImpl : public PerceptionBase {
@@ -93,7 +96,7 @@ class PerceptionImpl : public PerceptionBase {
       // ++k;
     }
 
-    *cloud_fused_ += cloud_W;
+    *cloud_fused_ += *cloud_W;
   }
 
   Isometry3d EstimatePose() {
