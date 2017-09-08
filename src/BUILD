@@ -25,7 +25,7 @@ cc_library(
     ],
     deps = [
         ":pcl_stuff",
-        "@drake//drake/examples/kuka_iiwa_arm/dev/push_pick_place:push_and_pick_state_machine",
+        "@drake//drake/systems/sensors:image_to_lcm_image_array_t",
     ],
 )
 
@@ -36,5 +36,17 @@ cc_binary(
     ],
     deps = [
         ":perception",
+    ],
+)
+
+cc_binary(
+    name = "pose_est_sim",
+    srcs = [
+        "pose_est_sim.cc",
+    ],
+    deps = [
+        ":perception",
+        "@drake//drake/examples/kuka_iiwa_arm/dev/push_pick_place:perception_base",
+        "@drake//drake/examples/kuka_iiwa_arm/dev/push_pick_place:push_and_pick_state_machine",
     ],
 )
