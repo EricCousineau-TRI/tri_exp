@@ -22,6 +22,9 @@ using drake::manipulation::sensors::Xtion;
 using Eigen::Isometry3d;
 using Eigen::Matrix3Xf;
 
+DEFINE_bool(with_perception, true,
+            "Add perception for estimating book position.");
+
 namespace tri_exp {
 
 const std::string kPath =
@@ -129,5 +132,6 @@ int main(int argc, char* argv[]) {
   drake::logging::HandleSpdlogGflags();
 
   return drake::examples::kuka_iiwa_arm::push_and_pick::DoMain(
-      std::make_unique<PerceptionImpl>());
+      FLAGS_with_perception ?
+         std::make_unique<PerceptionImpl>() : nullptr);
 }
