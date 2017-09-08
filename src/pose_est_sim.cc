@@ -27,13 +27,15 @@ DEFINE_bool(with_perception, true,
 
 namespace tri_exp {
 
+typedef PointCloudPerception<ColoredPointT, ColoredPointTNormal> PerceptionProc;
+
 const std::string kPath =
     "drake/manipulation/models/iiwa_description/urdf/"
     "iiwa14_polytope_collision.urdf";
 
-Isometry3d GetBookPose(pcl::PointCloud<ColoredPointT>::ConstPtr cloud_in) {
-  PointCloudPerception<ColoredPointT, ColoredPointTNormal> perception_proc;
-
+Isometry3d GetBookPose(PerceptionProc* pperception_proc,
+                       pcl::PointCloud<ColoredPointT>::ConstPtr cloud_in) {
+  PerceptionProc& perception_proc = *pperception_proc;
   // Need a copy...
   pcl::PointCloud<ColoredPointT>::Ptr cloud(new PointCloud<ColoredPointT>());
   pcl::copyPointCloud(*cloud_in, *cloud);
@@ -48,7 +50,7 @@ Isometry3d GetBookPose(pcl::PointCloud<ColoredPointT>::ConstPtr cloud_in) {
   max_range << 0.95, 0.5, 0.3;
   perception_proc.CutWithWorkSpaceConstraints(cloud, min_range, max_range);
   // Get rid of the table.
-  double thickness = 0.0125;
+  double thickness = 0.025;
   perception_proc.SubtractTable(cloud, thickness);
 
   Eigen::Vector3f center, top_corner, lower_corner;
@@ -72,10 +74,11 @@ Isometry3d GetBookPose(pcl::PointCloud<ColoredPointT>::ConstPtr cloud_in) {
 
 class PerceptionImpl : public PerceptionBase {
  public:
-  PerceptionImpl()
-      : PerceptionBase(Xtion::GetCameraIntrinsics()) {
+  PerceptionImpl(PerceptionProc* perception_proc)
+      : PerceptionBase(Xtion::GetCameraIntrinsics()),
+        perception_proc_(perception_proc) {
     // Use camera_info from simulation.
-    done_ = false;
+    DRAKE_DEMAND(perception_proc_ != nullptr);
     cloud_fused_.reset(new PointCloud<ColoredPointT>());
   }
 
@@ -109,11 +112,17 @@ class PerceptionImpl : public PerceptionBase {
     }
 
     *cloud_fused_ += *cloud_W;
+
+    auto X_WW = Eigen::Isometry3d::Identity();
+
+    drake::log()->info("Update - Visualize");
+    perception_proc_->VisualizePointCloudDrake(cloud_W, X_WW, "READ");
+    perception_proc_->VisualizePointCloudDrake(cloud_fused_, X_WW, "FUSED");
   }
 
   Isometry3d EstimatePose() {
     DRAKE_ASSERT(!done_);
-    Isometry3d out = GetBookPose(cloud_fused_);
+    Isometry3d out = GetBookPose(perception_proc_, cloud_fused_);
     done_ = true;
     return out;
   }
@@ -121,6 +130,7 @@ class PerceptionImpl : public PerceptionBase {
  private:
   bool done_{};
   PointCloud<ColoredPointT>::Ptr cloud_fused_;
+  PerceptionProc* perception_proc_{};
 };
 
 }  // namespace tri_exp
@@ -131,7 +141,9 @@ int main(int argc, char* argv[]) {
   gflags::ParseCommandLineFlags(&argc, &argv, true);
   drake::logging::HandleSpdlogGflags();
 
+  PerceptionProc perception_proc;
+
   return drake::examples::kuka_iiwa_arm::push_and_pick::DoMain(
       FLAGS_with_perception ?
-         std::make_unique<PerceptionImpl>() : nullptr);
+         std::make_unique<PerceptionImpl>(&perception_proc) : nullptr);
 }
