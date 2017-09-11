@@ -64,19 +64,21 @@ int main() {
   // int x = system("bash -c pwd");
   // (void)x;
 
-  double dist_threshold = 0.01;
+  double dist_threshold = 0.001;
   pcl::PointIndices::Ptr inliers(new pcl::PointIndices ());
   pcl::ModelCoefficients::Ptr coefficients (new pcl::ModelCoefficients());
 
   pcl::SACSegmentation<T> seg;
   // Optional
-  seg.setOptimizeCoefficients (true);
+  // seg.setOptimizeCoefficients (true);
   // Mandatory
   seg.setModelType(pcl::SACMODEL_PLANE);
   seg.setMethodType(pcl::SAC_RANSAC);
   seg.setDistanceThreshold(dist_threshold);
 
   seg.setInputCloud(cloud);
+  seg.setMaxIterations(200);
+  seg.setAxis(Eigen::Vector3f::UnitZ());
   seg.segment(*inliers, *coefficients);
 
   int num_before = cloud->size();
@@ -90,6 +92,13 @@ int main() {
 
   extract.setNegative (true);
   extract.filter(*non_plane);
+
+  cout << "Inlier: " << inliers->indices.size() << endl;
+  cout << "Plane: " << plane->size() << endl;
+  cout << "Size diff: " << cloud->size() - (plane->size() + non_plane->size()) << endl;
+  Eigen::Map<Eigen::VectorXf> coeffs(coefficients->values.data(),
+      coefficients->values.size());
+  cout << "Coeffs: " << coeffs.transpose() << endl;
 
   // Visualize.
   pcl::visualization::PCLVisualizer viewer("Point Cloud Visualization");
