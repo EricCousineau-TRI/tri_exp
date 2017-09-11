@@ -54,11 +54,11 @@ Isometry3d GetBookPose(PerceptionProc* pperception_proc,
 
   perception_proc.VisualizePointCloudDrake(cloud, X_WW, "Post Cut");
 
-  // // Get rid of the table.
-  // double thickness = 0.025;
-  // perception_proc.SubtractTable(cloud, thickness);
+  // Get rid of the table.
+  double thickness = 0.001;
+  perception_proc.SubtractTable(cloud, thickness);
 
-  // perception_proc.VisualizePointCloudDrake(cloud, X_WW, "Subtracted");
+  perception_proc.VisualizePointCloudDrake(cloud, X_WW, "Post Subtract");
 
   // Eigen::Vector3f center, top_corner, lower_corner;
   // Eigen::Matrix3f orientation;
