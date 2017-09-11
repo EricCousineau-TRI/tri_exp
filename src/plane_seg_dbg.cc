@@ -62,7 +62,7 @@ int main() {
   pcl::PCDReader reader;
   reader.read<T>(file_name, *cloud);
   std::vector<int> indices;
-  pcl::removeNaNFromPointCloud(*cloud,*cloud, indices);
+  pcl::removeNaNFromPointCloud(*cloud, *cloud, indices);
   std::cout << "remove Nan size" << indices.size() << std::endl;
 
   // int x = system("bash -c pwd");

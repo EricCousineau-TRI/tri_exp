@@ -9,7 +9,12 @@
 #include <pcl/search/impl/search.hpp>
 #include <pcl/visualization/impl/pcl_visualizer.hpp>
 
+#include <pcl/sample_consensus/ransac.h>
+#include <pcl/sample_consensus/sac_model_plane.h>
+
 #include <bot_core/pointcloud_t.hpp>
+
+#include "drake/common/drake_assert.h"
 
 template <typename T, typename T2>
 void PointCloudPerception<T, T2>::LoadPCDFile(std::string file_name,
@@ -220,23 +225,41 @@ void PointCloudPerception<T, T2>::SubtractTable(
     boost::shared_ptr<pcl::PointCloud<T>> removed) {
 	  // Get rid of the table.
   pcl::PointIndices::Ptr inliers(new pcl::PointIndices ());
-  Eigen::Vector4d coeffs_plane;
-  FindPlane(cloud, &coeffs_plane, inliers, table_thickness);
+  // Eigen::Vector4d coeffs_plane;
+  // FindPlane(cloud, &coeffs_plane, inliers, table_thickness);
+
+  // std::vector<int> indices;
+  // pcl::removeNaNFromPointCloud(*cloud, *cloud, indices);
+
+  {
+    typename pcl::SampleConsensusModelPlane<T>::Ptr model(
+        new pcl::SampleConsensusModelPlane<T>(cloud));
+    typename pcl::RandomSampleConsensus<T> sac(model, table_thickness);
+    sac.setMaxIterations (50);
+    DRAKE_ASSERT(sac.computeModel());
+    sac.getInliers (inliers->indices);
+  }
+
   int num_before = cloud->size();
+
   pcl::ExtractIndices<T> extract;
-  extract.setInputCloud (cloud);
-  extract.setIndices (inliers);
+  extract.setInputCloud(cloud);
+  extract.setIndices(inliers);
+
+  typename pcl::PointCloud<T>::Ptr plane(new pcl::PointCloud<T>());
+  typename pcl::PointCloud<T>::Ptr non_plane(new pcl::PointCloud<T>());
+  extract.filter(*plane);
+
   extract.setNegative (true);
+  extract.filter(*non_plane);
 
-  typename pcl::PointCloud<T>::Ptr cloud_filtered(new pcl::PointCloud<T>());
-  extract.filter (*cloud_filtered);
+  Eigen::Isometry3d X_WW = Eigen::Isometry3d::Identity();
+  VisualizePointCloudDrake(plane, X_WW, "plane");
+  VisualizePointCloudDrake(non_plane, X_WW, "non_plane");
 
-  extract.setNegative(false);
-  extract.filter (*removed);
+  *cloud = *non_plane;
+  *removed = *plane;
 
-  cloud = cloud_filtered;
-
-  // cloud.sawp(cloud_filtered;
   int num_after = cloud->size();
   std::cout << "Before: " << num_before
       << ", After: " << num_after << std::endl;
@@ -746,7 +769,7 @@ cv::Mat PointCloudPerception<T, T2>::ProjectColoredPointCloudToCameraImagePlane(
 }
 #endif  // false
 
-template class PointCloudPerception<PointT, PointTNormal>;
+// template class PointCloudPerception<PointT, PointTNormal>;
 template class PointCloudPerception<ColoredPointT, ColoredPointTNormal>;
 
 // template void PointCloudPerception<PointT>::ApplyTransformToPointCloud(Eigen::Affine3f,
