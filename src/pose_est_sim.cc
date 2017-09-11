@@ -1,5 +1,7 @@
 #include <gflags/gflags.h>
 
+#include <pcl/io/pcd_io.h>
+
 #include "drake/common/text_logging_gflags.h"
 
 #include "perception.h"
@@ -54,6 +56,8 @@ Isometry3d GetBookPose(PerceptionProc* pperception_proc,
 
   perception_proc.VisualizePointCloudDrake(cloud, X_WW, "Post Cut");\
   // perception_proc.VisualizePointCloud(cloud);
+
+  pcl::io::savePCDFileASCII("pre_subtract.pcd", *cloud);
 
   // Get rid of the table.
   double thickness = 0.002;
