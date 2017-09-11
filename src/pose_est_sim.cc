@@ -22,6 +22,8 @@ using drake::manipulation::sensors::Xtion;
 using Eigen::Isometry3d;
 using Eigen::Matrix3Xf;
 
+auto X_WW = Eigen::Isometry3d::Identity();
+
 DEFINE_bool(with_perception, true,
             "Add perception for estimating book position.");
 
@@ -52,6 +54,8 @@ Isometry3d GetBookPose(PerceptionProc* pperception_proc,
   // Get rid of the table.
   double thickness = 0.025;
   perception_proc.SubtractTable(cloud, thickness);
+
+  perception_proc.VisualizePointCloudDrake(cloud, X_WW, "Subtracted");
 
   Eigen::Vector3f center, top_corner, lower_corner;
   Eigen::Matrix3f orientation;
@@ -112,8 +116,6 @@ class PerceptionImpl : public PerceptionBase {
     }
 
     *cloud_fused_ += *cloud_W;
-
-    auto X_WW = Eigen::Isometry3d::Identity();
 
     drake::log()->info("Update - Visualize");
     // perception_proc_->VisualizePointCloudDrake(cloud_W, X_WW, "READ");
