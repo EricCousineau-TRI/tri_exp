@@ -43,14 +43,17 @@ Isometry3d GetBookPose(PerceptionProc* pperception_proc,
   pcl::copyPointCloud(*cloud_in, *cloud);
 
   perception_proc.OutlierRemoval(cloud);
-  // perception_proc.VisualizePointCloudDrake(cloud);
+  perception_proc.VisualizePointCloudDrake(cloud, X_WW, "Outlier");
 
   //cin.get();
   Eigen::Vector3f min_range;
-  min_range << 0.1, -0.9, 0.6;
+  min_range << 0.1, -1.0, 0.6;
   Eigen::Vector3f max_range;
   max_range << 0.6, -0.2, 1;
   perception_proc.CutWithWorkSpaceConstraints(cloud, min_range, max_range);
+
+  perception_proc.VisualizePointCloudDrake(cloud, X_WW, "Cut");
+
   // Get rid of the table.
   double thickness = 0.025;
   perception_proc.SubtractTable(cloud, thickness);
