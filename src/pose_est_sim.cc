@@ -41,7 +41,7 @@ Isometry3d GetBookPose(PerceptionProc* pperception_proc,
   pcl::copyPointCloud(*cloud_in, *cloud);
 
   perception_proc.OutlierRemoval(cloud);
-  perception_proc.VisualizePointCloudDrake(cloud);
+  // perception_proc.VisualizePointCloudDrake(cloud);
 
   //cin.get();
   Eigen::Vector3f min_range;
@@ -116,8 +116,8 @@ class PerceptionImpl : public PerceptionBase {
     auto X_WW = Eigen::Isometry3d::Identity();
 
     drake::log()->info("Update - Visualize");
-    perception_proc_->VisualizePointCloudDrake(cloud_W, X_WW, "READ");
-    perception_proc_->VisualizePointCloudDrake(cloud_fused_, X_WW, "FUSED");
+    // perception_proc_->VisualizePointCloudDrake(cloud_W, X_WW, "READ");
+    // perception_proc_->VisualizePointCloudDrake(cloud_fused_, X_WW, "FUSED");
   }
 
   Isometry3d EstimatePose() {
