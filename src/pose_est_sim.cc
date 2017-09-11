@@ -43,7 +43,7 @@ Isometry3d GetBookPose(PerceptionProc* pperception_proc,
   pcl::copyPointCloud(*cloud_in, *cloud);
 
   perception_proc.OutlierRemoval(cloud);
-  perception_proc.VisualizePointCloudDrake(cloud, X_WW, "Outlier");
+  perception_proc.VisualizePointCloudDrake(cloud, X_WW, "Post OutlierRemoval");
 
   //cin.get();
   Eigen::Vector3f min_range;
@@ -52,30 +52,30 @@ Isometry3d GetBookPose(PerceptionProc* pperception_proc,
   max_range << 0.6, -0.2, 1;
   perception_proc.CutWithWorkSpaceConstraints(cloud, min_range, max_range);
 
-  perception_proc.VisualizePointCloudDrake(cloud, X_WW, "Cut");
+  perception_proc.VisualizePointCloudDrake(cloud, X_WW, "Post Cut");
 
-  // Get rid of the table.
-  double thickness = 0.025;
-  perception_proc.SubtractTable(cloud, thickness);
+  // // Get rid of the table.
+  // double thickness = 0.025;
+  // perception_proc.SubtractTable(cloud, thickness);
 
-  perception_proc.VisualizePointCloudDrake(cloud, X_WW, "Subtracted");
+  // perception_proc.VisualizePointCloudDrake(cloud, X_WW, "Subtracted");
 
-  Eigen::Vector3f center, top_corner, lower_corner;
-  Eigen::Matrix3f orientation;
-  double cover_ratio = 0.95;
-  perception_proc.FindBoundingBox(cloud, &center, &top_corner, 
-    &lower_corner, &orientation, cover_ratio);
-  double yaw_angle_radian = atan2(orientation(1,0), orientation(0,0));
-  std::cout << "Center point bbox: " << center.transpose() << std::endl;
-  std::cout << "Top right corner: " << top_corner.transpose() << std::endl;
-  std::cout << "Lower left corner: " << lower_corner.transpose() << std::endl;
-  std::cout << "Orientation: " << orientation << std::endl;
-  std::cout << "Yaw angle: " << yaw_angle_radian * 180 / M_PI << std::endl;
+  // Eigen::Vector3f center, top_corner, lower_corner;
+  // Eigen::Matrix3f orientation;
+  // double cover_ratio = 0.95;
+  // perception_proc.FindBoundingBox(cloud, &center, &top_corner, 
+  //   &lower_corner, &orientation, cover_ratio);
+  // double yaw_angle_radian = atan2(orientation(1,0), orientation(0,0));
+  // std::cout << "Center point bbox: " << center.transpose() << std::endl;
+  // std::cout << "Top right corner: " << top_corner.transpose() << std::endl;
+  // std::cout << "Lower left corner: " << lower_corner.transpose() << std::endl;
+  // std::cout << "Orientation: " << orientation << std::endl;
+  // std::cout << "Yaw angle: " << yaw_angle_radian * 180 / M_PI << std::endl;
 
   Isometry3d X_WO;
   X_WO.setIdentity();
-  X_WO.translation() = center.cast<double>();
-  X_WO.linear() << orientation.cast<double>();
+  // X_WO.translation() = center.cast<double>();
+  // X_WO.linear() << orientation.cast<double>();
   return X_WO;
 }
 
