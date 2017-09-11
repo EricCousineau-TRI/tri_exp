@@ -225,26 +225,25 @@ void PointCloudPerception<T, T2>::SubtractTable(
     boost::shared_ptr<pcl::PointCloud<T>> removed) {
 	  // Get rid of the table.
   pcl::PointIndices::Ptr inliers(new pcl::PointIndices ());
-  // Eigen::Vector4d coeffs_plane;
-  // FindPlane(cloud, &coeffs_plane, inliers, table_thickness);
 
-  // std::vector<int> indices;
-  // pcl::removeNaNFromPointCloud(*cloud, *cloud, indices);
+  double dist_threshold = table_thickness;
 
+  // Works well:
+  // from: pcl/tools/sac_segmentation_plane.cpp
   {
     typename pcl::SampleConsensusModelPlane<T>::Ptr model(
         new pcl::SampleConsensusModelPlane<T>(cloud));
-    typename pcl::RandomSampleConsensus<T> sac(model, table_thickness);
-    sac.setMaxIterations (50);
-    DRAKE_ASSERT(sac.computeModel());
+    pcl::RandomSampleConsensus<T> sac(model, dist_threshold);
+    sac.setMaxIterations(50);
+    bool res = sac.computeModel();
+    DRAKE_DEMAND(res);
     sac.getInliers (inliers->indices);
   }
 
   int num_before = cloud->size();
-
   pcl::ExtractIndices<T> extract;
-  extract.setInputCloud(cloud);
-  extract.setIndices(inliers);
+  extract.setInputCloud (cloud);
+  extract.setIndices (inliers);
 
   typename pcl::PointCloud<T>::Ptr plane(new pcl::PointCloud<T>());
   typename pcl::PointCloud<T>::Ptr non_plane(new pcl::PointCloud<T>());
@@ -252,10 +251,6 @@ void PointCloudPerception<T, T2>::SubtractTable(
 
   extract.setNegative (true);
   extract.filter(*non_plane);
-
-  Eigen::Isometry3d X_WW = Eigen::Isometry3d::Identity();
-  VisualizePointCloudDrake(plane, X_WW, "plane");
-  VisualizePointCloudDrake(non_plane, X_WW, "non_plane");
 
   *cloud = *non_plane;
   *removed = *plane;

@@ -128,8 +128,8 @@ int main() {
   pcl::visualization::PCLVisualizer viewer("Point Cloud Visualization");
   auto tf = Eigen::Affine3f::Identity();
   viewer.addCoordinateSystem(0.2, tf);
-  pcl::visualization::PointCloudColorHandlerCustom<ColoredPointT> green(cloud, 0, 255, 0);
-  pcl::visualization::PointCloudColorHandlerCustom<ColoredPointT> red(cloud, 255, 0, 0);
+  pcl::visualization::PointCloudColorHandlerCustom<ColoredPointT> green(plane, 0, 255, 0);
+  pcl::visualization::PointCloudColorHandlerCustom<ColoredPointT> red(non_plane, 255, 0, 0);
   viewer.addPointCloud(plane, green, "Plane");
   viewer.addPointCloud(non_plane, red, "Non-plane");
 
