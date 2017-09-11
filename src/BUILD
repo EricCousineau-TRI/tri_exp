@@ -29,6 +29,7 @@ cc_library(
         ":pcl_stuff",
         "@drake//drake/lcm",
         "@drake//drake/systems/sensors:image_to_lcm_image_array_t",
+        "@drake//drake/perception/estimators/dev:pose_closed_form",
     ],
 )
 

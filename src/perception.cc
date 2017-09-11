@@ -16,6 +16,8 @@
 
 #include "drake/common/drake_assert.h"
 
+#include "drake/perception/estimators/dev/pose_closed_form.h"
+
 template <typename T, typename T2>
 void PointCloudPerception<T, T2>::LoadPCDFile(std::string file_name,
 		boost::shared_ptr<pcl::PointCloud<T>> cloud) {
@@ -377,6 +379,66 @@ void PointCloudPerception<T, T2>::SelectNearCentroidPoints(
 	}
 }
 
+// Compute sign permutations to get rotation closest to a certain one.
+Eigen::Matrix3d GetClosestTo(
+    const Eigen::Matrix3d& R_in,
+    const Eigen::Matrix3d& R_anchor) {
+  Eigen::Matrix3d R_in_check = R_anchor.inverse() * R_in;
+  struct Metric {
+    double distance{std::numeric_limits<double>::infinity()};
+    int x_sign{1};
+    int y_sign{1};
+    Eigen::Matrix3d I_p;
+  };
+  Metric m;
+  for (int x_sign : {1, -1}) {
+    for (int y_sign : {1, -1}) {
+      Eigen::Matrix3d I_p;
+      I_p.col(0) = x_sign * Eigen::Vector3d::UnitX();
+      I_p.col(1) = y_sign * Eigen::Vector3d::UnitY();
+      I_p.col(2) = x_sign * y_sign * Eigen::Vector3d::UnitZ();
+
+      Eigen::Matrix3d I_diff = I_p.transpose() * R_in_check;
+
+      Metric cur{I_diff.trace(), x_sign, y_sign, I_p};
+      if (cur.distance < m.distance) {
+        m = cur;
+      }
+    }
+  }
+  DRAKE_DEMAND(std::isfinite(m.distance));
+  return R_anchor * m.I_p * R_in_check;
+}
+
+
+void PointCloudToLcm(const Eigen::Matrix3Xd& pts_W,
+                     bot_core::pointcloud_t* pmessage) {
+  bot_core::pointcloud_t& message = *pmessage;
+  message.points.clear();
+  // TODO(eric.cousineau): Better way to get world name that is not RBT
+  // specific?
+  message.frame_id = "world";
+  message.n_channels = 0;
+  message.n_points = pts_W.cols();
+  message.points.resize(message.n_points);
+  for (int i = 0; i < message.n_points; ++i) {
+    Eigen::Vector3f pt_W = pts_W.col(i).cast<float>();
+    message.points[i] = {pt_W(0), pt_W(1), pt_W(2)};
+  }
+  message.n_points = message.points.size();
+}
+
+void PublishCloud(const Eigen::Matrix3Xd& points,
+                  const std::string& suffix) {
+  bot_core::pointcloud_t pt_msg{};
+  PointCloudToLcm(points, &pt_msg);
+  std::vector<uint8_t> bytes(pt_msg.getEncodedSize());
+  pt_msg.encode(bytes.data(), 0, bytes.size());
+  drake::lcm::DrakeLcm lcm;
+  lcm.Publish("DRAKE_POINTCLOUD_" + suffix, bytes.data(), bytes.size());
+}
+
+
 template <typename T, typename T2>
 void PointCloudPerception<T, T2>::FindBoundingBox(
 		const boost::shared_ptr<pcl::PointCloud<T>> cloud,
@@ -387,47 +449,69 @@ void PointCloudPerception<T, T2>::FindBoundingBox(
 	double left_scale = 0;
 	double right_scale = 1.0;
 	double eps_diff = 1e-4;
-	// Eigen uses 4f for its interface.
-	Eigen::Vector4f min_pt, max_pt;
-	Eigen::Vector4f mid_pt;
-	std::vector<int> remaining_index;
-	SelectNearCentroidPoints(cloud, &remaining_index, cover_ratio);
+	// // Eigen uses 4f for its interface.
+	// Eigen::Vector4f min_pt, max_pt;
+	// Eigen::Vector4f mid_pt;
+	// std::vector<int> remaining_index;
+	// SelectNearCentroidPoints(cloud, &remaining_index, cover_ratio);
 
-	pcl::compute3DCentroid(*cloud, remaining_index, mid_pt);
-	pcl::PCA<T> pca;
-	pca.setInputCloud(cloud);
-	Eigen::Matrix3f eigen_vectors = pca.getEigenVectors();
-	*orientation = eigen_vectors;
-	eigen_vectors.col(2) = eigen_vectors.col(0).cross(eigen_vectors.col(1));
+	// pcl::compute3DCentroid(*cloud, remaining_index, mid_pt);
+	// pcl::PCA<T> pca;
+	// pca.setInputCloud(cloud);
+	// Eigen::Matrix3f eigen_vectors = pca.getEigenVectors();
+	// *orientation = eigen_vectors;
+	// eigen_vectors.col(2) = eigen_vectors.col(0).cross(eigen_vectors.col(1));
 
-	std::cout << "PCAs:" << std::endl;
-	std::cout << eigen_vectors << std::endl;
-	boost::shared_ptr<pcl::PointCloud<T>> cloud_projected (new pcl::PointCloud<T>); 
-	pca.project(*cloud, *cloud_projected);
+	// std::cout << "PCAs:" << std::endl;
+	// std::cout << eigen_vectors << std::endl;
+	// boost::shared_ptr<pcl::PointCloud<T>> cloud_projected (new pcl::PointCloud<T>); 
+	// pca.project(*cloud, *cloud_projected);
 
-	pcl::getMinMax3D(*cloud_projected, remaining_index, min_pt, max_pt);
-	T pt_projected_min;
-	T pt_projected_max;
-	pt_projected_min.x = min_pt(0);
-	pt_projected_min.y = min_pt(1);
-	pt_projected_min.z = min_pt(2);
-	pt_projected_max.x = max_pt(0);
-	pt_projected_max.y = max_pt(1);
-	pt_projected_max.z = max_pt(2);
 
-	std::cout << pt_projected_min << std::endl;
-	std::cout << pt_projected_max << std::endl;
-	std::cout << "----------------" << std::endl;
-	T pt_min, pt_max;
-	pca.reconstruct(pt_projected_min, pt_min);
-	pca.reconstruct(pt_projected_max, pt_max);
-	std::cout << pt_min << std::endl;
-	std::cout << pt_max << std::endl; 
+  // pcl::ExtractIndices<T> extract;
+  // extract.setInputCloud (cloud);
+  // pcl::PointIndices::Ptr indices(new pcl::PointIndices ());
+  // indices->indices = remaining_index;
+  // extract.setIndices(indices);
+  // extract.filter(*cloud);  // In-place safe?
 
-	*top_corner = Eigen::Vector3f(pt_max.x,pt_max.y,pt_max.z);
-	*lower_corner = Eigen::Vector3f(pt_min.x,pt_min.y,pt_min.z);
+  // Reconstruct Eigen:: matrix stuff
+  Eigen::Matrix3Xd y_W(3, cloud->size());
+  for (int i = 0; i < cloud->size(); ++i) {
+    auto&& pt = cloud->points[i];
+    y_W.col(i) << pt.x, pt.y, pt.z;
+  }
+
+  using namespace drake::perception::estimators;
+  Eigen::Isometry3d X_WB = ComputePcaBodyPose(y_W);
+
+  Eigen::Matrix3d R_WB = X_WB.linear();
+  Eigen::Matrix3Xd y_B = R_WB.transpose() * y_W;
+
+  cout << "R_WB:\n" << R_WB << endl << endl;
+
+  PublishCloud(y_W, "y_W");
+  PublishCloud(y_B, "y_B");
+
+  // Why does this not work???
+  Eigen::Vector3d y_min_B = y_B.rowwise().minCoeff();
+  Eigen::Vector3d y_max_B = y_B.rowwise().maxCoeff();
+  Eigen::Vector3d y_min_W = R_WB * y_min_B;
+  Eigen::Vector3d y_max_W = R_WB * y_max_B;
+
+  cout << "y_min_B: " << y_min_B.transpose() << endl;
+  cout << "y_max_B: " << y_max_B.transpose() << endl;
+
+  cout << "y_min_W: " << y_min_W.transpose() << endl;
+  cout << "y_max_W: " << y_max_W.transpose() << endl;
+
+	*top_corner = y_max_W.cast<float>();
+	*lower_corner = y_min_W.cast<float>();
 	//*center = Eigen::Vector3f(mid_pt(0),mid_pt(1),mid_pt(2));
 	*center = (*top_corner + *lower_corner) / 2.0;
+
+  Eigen::Matrix3d R_WBp = GetClosestTo(R_WB, Eigen::Matrix3d::Identity());
+  *orientation = R_WBp.cast<float>();
 }
 
 template <typename T, typename T2>
@@ -436,52 +520,7 @@ void PointCloudPerception<T, T2>::FindBoundingBox(
 		Eigen::Vector3f* center, Eigen::Vector3f* top_corner, 
 		Eigen::Vector3f* lower_corner, Eigen::Matrix3f* orientation,
 		double cover_ratio) {
-	int num_pts = cloud->size();
-	double left_scale = 0;
-	double right_scale = 1.0;
-	double eps_diff = 1e-4;
-	// Eigen uses 4f for its interface.
-	Eigen::Vector4f min_pt, max_pt;
-	Eigen::Vector4f mid_pt;
-	std::vector<int> remaining_index;
-	SelectNearCentroidPoints(cloud, &remaining_index, cover_ratio);
-
-	pcl::compute3DCentroid(*cloud, remaining_index, mid_pt);
-	pcl::PCA<T2> pca;
-	pca.setInputCloud(cloud);
-	Eigen::Matrix3f eigen_vectors = pca.getEigenVectors();
-	*orientation = eigen_vectors;
-	eigen_vectors.col(2) = eigen_vectors.col(0).cross(eigen_vectors.col(1));
-
-	std::cout << "PCAs:" << std::endl;
-	std::cout << eigen_vectors << std::endl;
-	boost::shared_ptr<pcl::PointCloud<T2>> cloud_projected (new pcl::PointCloud<T2>); 
-	pca.project(*cloud, *cloud_projected);
-
-	pcl::getMinMax3D(*cloud_projected, remaining_index, min_pt, max_pt);
-	T2 pt_projected_min;
-	T2 pt_projected_max;
-	pt_projected_min.x = min_pt(0);
-	pt_projected_min.y = min_pt(1);
-	pt_projected_min.z = min_pt(2);
-	pt_projected_max.x = max_pt(0);
-	pt_projected_max.y = max_pt(1);
-	pt_projected_max.z = max_pt(2);
-
-	std::cout << pt_projected_min << std::endl;
-	std::cout << pt_projected_max << std::endl;
-	std::cout << "----------------" << std::endl;
-	T2 pt_min, pt_max;
-	pca.reconstruct(pt_projected_min, pt_min);
-	pca.reconstruct(pt_projected_max, pt_max);
-	std::cout << pt_min << std::endl;
-	std::cout << pt_max << std::endl; 
-
-	*top_corner = Eigen::Vector3f(pt_max.x,pt_max.y,pt_max.z);
-	*lower_corner = Eigen::Vector3f(pt_min.x,pt_min.y,pt_min.z);
-	//*center = Eigen::Vector3f(mid_pt(0),mid_pt(1),mid_pt(2));
-	*center = (*top_corner + *lower_corner) / 2.0;
-
+  throw std::runtime_error("Not implemented");
 }
    
 
