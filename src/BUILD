@@ -10,6 +10,8 @@ cc_library(
         "@vtk//:vtkmetaio",
         "@vtk//:vtklz4",
         "@vtk//:vtkDICOMParser",
+        # For not caring:
+        "@vtk//:catch_all",
     ],
 )
 

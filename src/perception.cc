@@ -3,8 +3,11 @@
 #include <pcl/console/time.h>
 #include <pcl/common/pca.h>
 
+#include <pcl/visualization/pcl_visualizer.h>
+
 // Need to incorporate implementation.
 #include <pcl/search/impl/search.hpp>
+#include <pcl/visualization/impl/pcl_visualizer.hpp>
 
 #include <bot_core/pointcloud_t.hpp>
 
@@ -121,18 +124,20 @@ void PointCloudPerception<T, T2>::CutWithWorkSpaceConstraints(
 template <typename T, typename T2>
 void PointCloudPerception<T, T2>::VisualizePointCloud(
     const boost::shared_ptr<pcl::PointCloud<ColoredPointT>>cloud, Eigen::Affine3f tf) {
-  throw std::runtime_error("Not implemented");
-	// std::cout << "open up viewer" << std::endl;
- //  pcl::visualization::PCLVisualizer viewer("Point Cloud Visualization");
-	// viewer.addCoordinateSystem(0.2, tf);
+  // throw std::runtime_error("Not implemented");
+	std::cout << "open up viewer" << std::endl;
+  pcl::visualization::PCLVisualizer viewer("Point Cloud Visualization");
+	viewer.addCoordinateSystem(0.2, tf);
+  pcl::visualization::PointCloudColorHandlerCustom<ColoredPointT> single_color (cloud, 0, 255, 0);
 	// pcl::visualization::PointCloudColorHandlerRGBField<ColoredPointT> rgb(cloud);
-	// std::cout << "!!" << std::endl;
+	std::cout << "!!" << std::endl;
 	// viewer.addPointCloud(cloud, rgb, "Cloud");
-	// std::cout << "to display" << std::endl;
-	// // Display the point cloud until 'q' key is pressed.
- //  while (!viewer.wasStopped ()) {
- //    viewer.spinOnce ();
- //  }
+  viewer.addPointCloud(cloud, single_color, "Cloud");
+	std::cout << "to display" << std::endl;
+	// Display the point cloud until 'q' key is pressed.
+  while (!viewer.wasStopped ()) {
+    viewer.spinOnce ();
+  }
 }
 
 template <typename PointT>
@@ -186,17 +191,17 @@ void PointCloudPerception<T, T2>::VisualizePointCloudAndNormal(
 		const boost::shared_ptr<pcl::PointCloud<ColoredPointT>> cloud,
     boost::shared_ptr<pcl::PointCloud<pcl::Normal>> normals,
     Eigen::Affine3f tf) {
-  throw std::runtime_error("Not implemented");
-	// pcl::visualization::PCLVisualizer viewer("Point Cloud Visualization");
-	// viewer.addCoordinateSystem(0.2, tf);
-	// pcl::visualization::PointCloudColorHandlerRGBField<ColoredPointT> rgb(cloud);
-	// viewer.addPointCloud(cloud, rgb, "Cloud");
+  // throw std::runtime_error("Not implemented");
+	pcl::visualization::PCLVisualizer viewer("Point Cloud Visualization");
+	viewer.addCoordinateSystem(0.2, tf);
+	pcl::visualization::PointCloudColorHandlerRGBField<ColoredPointT> rgb(cloud);
+	viewer.addPointCloud(cloud, rgb, "Cloud");
 
-	// viewer.addPointCloudNormals<ColoredPointT, pcl::Normal>(cloud, normals);
-	// // Display the point cloud until 'q' key is pressed.
- //  while (!viewer.wasStopped ()) {
- //    viewer.spinOnce ();
- //  }
+	viewer.addPointCloudNormals<ColoredPointT, pcl::Normal>(cloud, normals);
+	// Display the point cloud until 'q' key is pressed.
+  while (!viewer.wasStopped ()) {
+    viewer.spinOnce ();
+  }
 }
 
 template <typename T, typename T2>

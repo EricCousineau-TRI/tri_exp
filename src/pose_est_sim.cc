@@ -52,10 +52,11 @@ Isometry3d GetBookPose(PerceptionProc* pperception_proc,
   max_range << 0.6, -0.2, 1;
   perception_proc.CutWithWorkSpaceConstraints(cloud, min_range, max_range);
 
-  perception_proc.VisualizePointCloudDrake(cloud, X_WW, "Post Cut");
+  perception_proc.VisualizePointCloudDrake(cloud, X_WW, "Post Cut");\
+  // perception_proc.VisualizePointCloud(cloud);
 
   // Get rid of the table.
-  double thickness = 0.001;
+  double thickness = 0.01;
   perception_proc.SubtractTable(cloud, thickness);
 
   perception_proc.VisualizePointCloudDrake(cloud, X_WW, "Post Subtract");
