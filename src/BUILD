@@ -52,3 +52,16 @@ cc_binary(
         "@drake//drake/examples/kuka_iiwa_arm/dev/push_pick_place:push_and_pick_demo_lib",
     ],
 )
+
+cc_binary(
+    name = "plane_seg_dbg",
+    srcs = [
+        "plane_seg_dbg.cc",
+    ],
+    data = [
+        "pre_subtract.pcd",
+    ],
+    deps = [
+        ":pcl_stuff",
+    ],
+)
