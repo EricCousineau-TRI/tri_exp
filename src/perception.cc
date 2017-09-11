@@ -216,30 +216,45 @@ void PointCloudPerception<T, T2>::SeparatePointsAndNormals(
 
 template <typename T, typename T2>
 void PointCloudPerception<T, T2>::SubtractTable(
-		boost::shared_ptr<pcl::PointCloud<T>> cloud, double table_thickness) {
+		boost::shared_ptr<pcl::PointCloud<T>> cloud, double table_thickness,
+    boost::shared_ptr<pcl::PointCloud<T>> removed) {
 	  // Get rid of the table.
   pcl::PointIndices::Ptr inliers(new pcl::PointIndices ());
   Eigen::Vector4d coeffs_plane;
   FindPlane(cloud, &coeffs_plane, inliers, table_thickness);
+  int num_before = cloud->size();
   pcl::ExtractIndices<T> extract;
   extract.setInputCloud (cloud);
   extract.setIndices (inliers);
   extract.setNegative (true);
-  extract.filter (*cloud);
+
+  typename pcl::PointCloud<T>::Ptr cloud_filtered(new pcl::PointCloud<T>());
+  extract.filter (*cloud_filtered);
+
+  extract.setNegative(false);
+  extract.filter (*removed);
+
+  cloud = cloud_filtered;
+
+  // cloud.sawp(cloud_filtered;
+  int num_after = cloud->size();
+  std::cout << "Before: " << num_before
+      << ", After: " << num_after << std::endl;
 }
 
 template <typename T, typename T2>
 void PointCloudPerception<T, T2>::SubtractTable(
 		boost::shared_ptr<pcl::PointCloud<T2>> cloud, double table_thickness) {
 	  // Get rid of the table.
-  pcl::PointIndices::Ptr inliers(new pcl::PointIndices ());
-  Eigen::Vector4d coeffs_plane;
-  FindPlane(cloud, &coeffs_plane, inliers, table_thickness);
-  pcl::ExtractIndices<T2> extract;
-  extract.setInputCloud (cloud);
-  extract.setIndices (inliers);
-  extract.setNegative (true);
-  extract.filter (*cloud);
+  throw std::runtime_error("Not implemented");
+  // pcl::PointIndices::Ptr inliers(new pcl::PointIndices ());
+  // Eigen::Vector4d coeffs_plane;
+  // FindPlane(cloud, &coeffs_plan1e, inliers, table_thickness);
+  // pcl::ExtractIndices<T2> extract;
+  // extract.setInputCloud (cloud);
+  // extract.setIndices (inliers);
+  // extract.setNegative (true);
+  // extract.filter (*cloud);
 }
 
 template <typename T, typename T2>

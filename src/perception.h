@@ -85,7 +85,8 @@ class PointCloudPerception {
 
     void FilterPointsWithEmptyNormals(boost::shared_ptr<pcl::PointCloud<T2>> cloud);
 
-    void SubtractTable(boost::shared_ptr<pcl::PointCloud<T>> cloud, double thickness = 0.01);
+    void SubtractTable(boost::shared_ptr<pcl::PointCloud<T>> cloud, double thickness = 0.01,
+      boost::shared_ptr<pcl::PointCloud<T>> removed = nullptr);
     void SubtractTable(boost::shared_ptr<pcl::PointCloud<T2>> cloud, double thickness = 0.01);
 
     void SelectNearCentroidPoints(const boost::shared_ptr<pcl::PointCloud<T2>> cloud, 

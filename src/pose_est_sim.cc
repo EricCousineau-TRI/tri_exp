@@ -56,10 +56,13 @@ Isometry3d GetBookPose(PerceptionProc* pperception_proc,
   // perception_proc.VisualizePointCloud(cloud);
 
   // Get rid of the table.
-  double thickness = 0.01;
-  perception_proc.SubtractTable(cloud, thickness);
+  double thickness = 0.002;
+  pcl::PointCloud<ColoredPointT>::Ptr removed(new PointCloud<ColoredPointT>());
+  perception_proc.SubtractTable(cloud, thickness, removed);
 
   perception_proc.VisualizePointCloudDrake(cloud, X_WW, "Post Subtract");
+
+  perception_proc.VisualizePointCloudDrake(removed, X_WW, "Removed");
 
   // Eigen::Vector3f center, top_corner, lower_corner;
   // Eigen::Matrix3f orientation;
