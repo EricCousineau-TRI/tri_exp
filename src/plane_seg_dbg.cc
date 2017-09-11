@@ -43,6 +43,10 @@
 
 #include <pcl/octree/octree_search.h>
 
+// Err...
+#include <pcl/sample_consensus/ransac.h>
+#include <pcl/sample_consensus/sac_model_plane.h>
+
 using namespace std;
 
 typedef pcl::PointXYZRGB ColoredPointT;
@@ -66,20 +70,40 @@ int main() {
 
   double dist_threshold = 0.001;
   pcl::PointIndices::Ptr inliers(new pcl::PointIndices ());
-  pcl::ModelCoefficients::Ptr coefficients (new pcl::ModelCoefficients());
+  // pcl::ModelCoefficients::Ptr coefficients (new pcl::ModelCoefficients());
 
-  pcl::SACSegmentation<T> seg;
-  // Optional
-  // seg.setOptimizeCoefficients (true);
-  // Mandatory
-  seg.setModelType(pcl::SACMODEL_PLANE);
-  seg.setMethodType(pcl::SAC_RANSAC);
-  seg.setDistanceThreshold(dist_threshold);
+  // Does not work well:
+  /*
+  {
+    pcl::SACSegmentation<T> seg;
+    // Optional
+    // seg.setOptimizeCoefficients (true);
+    // Mandatory
+    seg.setModelType(pcl::SACMODEL_PLANE);
+    seg.setMethodType(pcl::SAC_RANSAC);
+    seg.setDistanceThreshold(dist_threshold);
 
-  seg.setInputCloud(cloud);
-  seg.setMaxIterations(200);
-  seg.setAxis(Eigen::Vector3f::UnitZ());
-  seg.segment(*inliers, *coefficients);
+    seg.setInputCloud(cloud);
+    seg.setMaxIterations(200);
+    seg.setAxis(Eigen::Vector3f::UnitZ());
+    seg.segment(*inliers, *coefficients);
+  }
+  */
+
+  // Works well:
+  // from: pcl/tools/sac_segmentation_plane.cpp
+  {
+    pcl::SampleConsensusModelPlane<T>::Ptr model(
+        new pcl::SampleConsensusModelPlane<T>(cloud));
+    pcl::RandomSampleConsensus<T> sac (model, dist_threshold);
+    sac.setMaxIterations (50);
+    bool res = sac.computeModel ();
+    
+    // vector<int> inliers;
+    sac.getInliers (inliers->indices);
+    // Eigen::VectorXf coefficients;
+    // sac.getModelCoefficients(coefficients);
+  }
 
   int num_before = cloud->size();
   pcl::ExtractIndices<T> extract;
@@ -96,9 +120,9 @@ int main() {
   cout << "Inlier: " << inliers->indices.size() << endl;
   cout << "Plane: " << plane->size() << endl;
   cout << "Size diff: " << cloud->size() - (plane->size() + non_plane->size()) << endl;
-  Eigen::Map<Eigen::VectorXf> coeffs(coefficients->values.data(),
-      coefficients->values.size());
-  cout << "Coeffs: " << coeffs.transpose() << endl;
+  // Eigen::Map<Eigen::VectorXf> coeffs(coefficients->values.data(),
+  //     coefficients->values.size());
+  // cout << "Coeffs: " << coeffs.transpose() << endl;
 
   // Visualize.
   pcl::visualization::PCLVisualizer viewer("Point Cloud Visualization");
