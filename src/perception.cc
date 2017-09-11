@@ -517,7 +517,13 @@ void PointCloudPerception<T, T2>::FindBoundingBox(
 	//*center = Eigen::Vector3f(mid_pt(0),mid_pt(1),mid_pt(2));
 	*center = (*top_corner + *lower_corner) / 2.0;
 
-  Eigen::Matrix3d R_WBp = GetClosestTo(R_WB, Eigen::Matrix3d::Identity());
+  Eigen::Matrix3d R_WBp = R_WB; //GetClosestTo(R_WB, Eigen::Matrix3d::Identity());
+  if (Eigen::Vector3d::UnitZ().dot(R_WBp.col(2)) < -0.5) {
+    // Flip axes if Z is pointed down.
+    // Not sure how to choose between X and Y...
+    R_WBp.col(1) *= -1;
+    R_WBp.col(2) *= -1;
+  }
   *orientation = R_WBp.cast<float>();
 }
 
