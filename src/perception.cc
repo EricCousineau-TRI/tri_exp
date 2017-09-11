@@ -385,12 +385,14 @@ Eigen::Matrix3d GetClosestTo(
     const Eigen::Matrix3d& R_anchor) {
   Eigen::Matrix3d R_in_check = R_anchor.inverse() * R_in;
   struct Metric {
-    double distance{std::numeric_limits<double>::infinity()};
+    double distance{-std::numeric_limits<double>::infinity()};
     int x_sign{1};
     int y_sign{1};
     Eigen::Matrix3d I_p;
   };
+  using std::cout;
   Metric m;
+  cout << "Max:\n---\n";
   for (int x_sign : {1, -1}) {
     for (int y_sign : {1, -1}) {
       Eigen::Matrix3d I_p;
@@ -401,12 +403,17 @@ Eigen::Matrix3d GetClosestTo(
       Eigen::Matrix3d I_diff = I_p.transpose() * R_in_check;
 
       Metric cur{I_diff.trace(), x_sign, y_sign, I_p};
-      if (cur.distance < m.distance) {
+      cout << "- x: " << x_sign << "\n"
+        << "  y: " << y_sign << "\n"
+        << "  d: " << I_diff.trace() << "\n";
+      if (cur.distance > m.distance) {
         m = cur;
+        cout << " selected\n";
       }
     }
   }
   DRAKE_DEMAND(std::isfinite(m.distance));
+  cout << "Min:\n---\n";
   return R_anchor * m.I_p * R_in_check;
 }
 
