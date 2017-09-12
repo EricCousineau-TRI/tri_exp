@@ -1,2 +1,4 @@
 /bazel-*
 /tmp/
+/*.sublime-workspace
+/*.sublime-project
