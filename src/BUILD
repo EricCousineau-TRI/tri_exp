@@ -7,9 +7,9 @@ cc_library(
         "@vtk//:vtkCommonMath",
         "@vtk//:vtkRenderingLOD",
         # Normally private. Why do I have to include these???
-        "@vtk//:vtkmetaio",
-        "@vtk//:vtklz4",
-        "@vtk//:vtkDICOMParser",
+        # "@vtk//:vtkmetaio",
+        # "@vtk//:vtklz4",
+        # "@vtk//:vtkDICOMParser",
         # For not caring:
         "@vtk//:catch_all",
     ],
