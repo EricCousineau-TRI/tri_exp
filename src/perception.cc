@@ -392,14 +392,14 @@ Eigen::Matrix3d GetClosestTo(
   };
   using std::cout;
   Metric m;
-  cout << "Max:\n---\n";
+  cout << "---\n";
   for (int x_sign : {1, -1}) {
     for (int y_sign : {1, -1}) {
       Eigen::Matrix3d I_p;
       I_p.col(0) = x_sign * Eigen::Vector3d::UnitX();
       I_p.col(1) = y_sign * Eigen::Vector3d::UnitY();
       I_p.col(2) = x_sign * y_sign * Eigen::Vector3d::UnitZ();
-
+      // Transpose does not really do anything here...
       Eigen::Matrix3d I_diff = I_p.transpose() * R_in_check;
 
       Metric cur{I_diff.trace(), x_sign, y_sign, I_p};
@@ -412,9 +412,9 @@ Eigen::Matrix3d GetClosestTo(
       }
     }
   }
+  cout << "---\n";
   DRAKE_DEMAND(std::isfinite(m.distance));
-  cout << "Min:\n---\n";
-  return R_anchor * m.I_p * R_in_check;
+  return R_anchor * m.I_p.transpose() * R_in_check;
 }
 
 
