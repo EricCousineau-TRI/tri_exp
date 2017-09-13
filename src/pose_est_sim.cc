@@ -129,11 +129,14 @@ class PerceptionImpl : public PerceptionBase {
     *cloud_fused_ += *cloud_W;
 
     // Down-sample fused cloud.
+    using T = ColoredPointT;
     pcl::VoxelGrid<T> grid;
     const double leaf_size = 0.001;
+    std::cout << "Pre downsample: " << cloud_fused_->size() << std::endl;
     grid.setLeafSize(leaf_size, leaf_size, leaf_size);
     grid.setInputCloud(cloud_fused_);
     grid.filter(*cloud_fused_);
+    std::cout << "Post downsample: " << cloud_fused_->size() << std::endl;
 
     // perception_proc_->VisualizePointCloudDrake(cloud_W, X_WW, "READ");
     // perception_proc_->VisualizePointCloudDrake(cloud_fused_, X_WW, "FUSED");
