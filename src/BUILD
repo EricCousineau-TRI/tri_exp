@@ -51,6 +51,7 @@ cc_binary(
     deps = [
         ":perception",
         "@drake//drake/examples/kuka_iiwa_arm/dev/push_pick_place:push_and_pick_demo_lib",
+        "@libbot//:bot2_lcmgl_client",
     ],
 )
 

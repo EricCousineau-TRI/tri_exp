@@ -14,6 +14,8 @@
 #include "drake/examples/kuka_iiwa_arm/dev/push_pick_place/perception_base.h"
 #include "drake/examples/kuka_iiwa_arm/dev/push_pick_place/push_and_pick_demo.h"
 
+#include <bot_lcmgl_client/lcmgl.h>
+
 using pcl::PointCloud;
 using drake::systems::sensors::RgbdCamera;
 using drake::systems::sensors::CameraInfo;
@@ -130,16 +132,40 @@ class PerceptionImpl : public PerceptionBase {
 
     // Down-sample fused cloud.
     using T = ColoredPointT;
-    pcl::VoxelGrid<T> grid;
-    const double leaf_size = 0.001;
-    std::cout << "Pre downsample: " << cloud_fused_->size() << std::endl;
-    grid.setLeafSize(leaf_size, leaf_size, leaf_size);
-    grid.setInputCloud(cloud_fused_);
-    grid.filter(*cloud_fused_);
-    std::cout << "Post downsample: " << cloud_fused_->size() << std::endl;
+    {
+      pcl::VoxelGrid<T> grid;
+      const double leaf_size = 0.001;
+      std::cout << "Pre downsample: " << cloud_fused_->size() << std::endl;
+      grid.setLeafSize(leaf_size, leaf_size, leaf_size);
+      grid.setInputCloud(cloud_fused_);
+      grid.filter(*cloud_fused_);
+      std::cout << "Post downsample: " << cloud_fused_->size() << std::endl;
+    }
 
-    // perception_proc_->VisualizePointCloudDrake(cloud_W, X_WW, "READ");
-    // perception_proc_->VisualizePointCloudDrake(cloud_fused_, X_WW, "FUSED");
+    // static drake::lcm::DrakeLcm lcm;
+    // static auto* plcm = lcm.get_lcm_instance()->getUnderlyingLCM();
+    // static bot_lcmgl_t* pc = bot_lcmgl_init(plcm, "fused");
+    // bot_lcmgl_begin(pc, LCMGL_POINTS);
+    // for (int i = 0; i < 1000; ++i) {  // cloud_fused_->size(); 
+    //   auto& p = cloud_fused_->points[i];
+    //   bot_lcmgl_color3f(pc, 0.5, 1, 0.5);
+    //   bot_lcmgl_vertex3f(pc, p.x, p.y, p.z);
+    // }
+    // bot_lcmgl_end(pc);
+    // bot_lcmgl_switch_buffer(pc);
+
+    {
+      pcl::PointCloud<ColoredPointT>::Ptr
+          cloud_min(new pcl::PointCloud<ColoredPointT>());
+      pcl::VoxelGrid<T> grid;
+      const double leaf_size = 0.01;
+      grid.setLeafSize(leaf_size, leaf_size, leaf_size);
+      grid.setInputCloud(cloud_fused_);
+      grid.filter(*cloud_min);
+
+      // perception_proc_->VisualizePointCloudDrake(cloud_W, X_WW, "READ");
+      perception_proc_->VisualizePointCloudDrake(cloud_min, X_WW, "FUSED");
+    }
   }
 
   Isometry3d EstimatePose() {
