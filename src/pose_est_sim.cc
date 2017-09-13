@@ -128,7 +128,13 @@ class PerceptionImpl : public PerceptionBase {
 
     *cloud_fused_ += *cloud_W;
 
-    drake::log()->info("Update - Visualize");
+    // Down-sample fused cloud.
+    pcl::VoxelGrid<T> grid;
+    const double leaf_size = 0.001;
+    grid.setLeafSize(leaf_size, leaf_size, leaf_size);
+    grid.setInputCloud(cloud_fused_);
+    grid.filter(*cloud_fused_);
+
     // perception_proc_->VisualizePointCloudDrake(cloud_W, X_WW, "READ");
     // perception_proc_->VisualizePointCloudDrake(cloud_fused_, X_WW, "FUSED");
   }

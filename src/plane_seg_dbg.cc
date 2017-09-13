@@ -59,11 +59,22 @@ int main() {
 
   boost::shared_ptr<pcl::PointCloud<T>> cloud(new pcl::PointCloud<T>());
 
+  cout << "Reading..." << endl;
   pcl::PCDReader reader;
   reader.read<T>(file_name, *cloud);
   std::vector<int> indices;
   pcl::removeNaNFromPointCloud(*cloud, *cloud, indices);
   std::cout << "remove Nan size" << indices.size() << std::endl;
+
+  cout << "Before voxel: " << cloud->size() << endl;
+  pcl::VoxelGrid<T> grid;
+  const double leaf_size = 0.001;
+  grid.setLeafSize(leaf_size, leaf_size, leaf_size);
+  grid.setInputCloud(cloud);
+  grid.filter(*cloud);
+  cout << "After voxel: " << cloud->size() << endl;
+
+  pcl::io::savePCDFileASCII("pre_subtract_fixed.pcd", *cloud);
 
   // int x = system("bash -c pwd");
   // (void)x;
